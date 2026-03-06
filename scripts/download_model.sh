@@ -19,12 +19,32 @@ else
     echo "  stories110M.bin already exists"
 fi
 
-# TinyStories tokenized training data
-DATA_URL="https://huggingface.co/datasets/enio/TinyStories/resolve/main/TinyStories_tok32000/data00.bin"
+# TinyStories tokenized training data (from enio/TinyStories on HuggingFace)
+TAR_URL="https://huggingface.co/datasets/enio/TinyStories/resolve/main/tok32000/TinyStories_tok32000.tar.gz?download=true"
 DATA_FILE="$MODELS_DIR/tinystories_data00.bin"
+TAR_FILE="$MODELS_DIR/TinyStories_tok32000.tar.gz"
 if [ ! -f "$DATA_FILE" ]; then
-    echo "Downloading tinystories_data00.bin (~190MB)..."
-    curl -L --progress-bar -o "$DATA_FILE" "$DATA_URL"
+    echo "Downloading pretokenized TinyStories (32K vocab, ~993MB tar.gz)..."
+    curl -L --progress-bar -o "$TAR_FILE" "$TAR_URL"
+    # Verify it's a valid gzip file
+    if ! file "$TAR_FILE" | grep -q "gzip"; then
+        echo "Error: Downloaded file is not a valid gzip archive."
+        rm -f "$TAR_FILE"
+        exit 1
+    fi
+    echo "  Extracting data00.bin from archive..."
+    DATA_ENTRY=$(tar tzf "$TAR_FILE" 2>/dev/null | grep 'data00\.bin' | head -1)
+    if [ -z "$DATA_ENTRY" ]; then
+        echo "Error: data00.bin not found in archive."
+        exit 1
+    fi
+    tar xzf "$TAR_FILE" -C "$MODELS_DIR" "$DATA_ENTRY"
+    EXTRACTED="$MODELS_DIR/$DATA_ENTRY"
+    if [ "$EXTRACTED" != "$DATA_FILE" ]; then
+        mv "$EXTRACTED" "$DATA_FILE"
+        rmdir "$(dirname "$EXTRACTED")" 2>/dev/null || true
+    fi
+    rm -f "$TAR_FILE"
     echo "  Saved to $DATA_FILE"
 else
     echo "  tinystories_data00.bin already exists"

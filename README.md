@@ -170,6 +170,27 @@ cd cli && make test
 cd app/Tests && swiftc -o test_swift -framework Foundation NeuralForgeTests.swift && ./test_swift
 ```
 
+## Performance
+
+Measured on Apple M4 with Stories 110M (12-layer, dim=768, seq=256):
+
+| Metric | Value |
+|--------|-------|
+| **Forward pass (ANE)** | 15.0 ms/step |
+| **Forward TFLOPS** | 2.89 |
+| **Training step (fwd+bwd)** | ~71 ms/step (steady state) |
+| **Training TFLOPS (ANE)** | 1.48 |
+| **Training TFLOPS (total)** | 2.44 |
+| **Kernel compilation** | ~5.5s per batch (86 kernels) |
+| **Checkpoint save** | 1.3 GB (weights + Adam states) |
+
+The `--no-ane-extras` flag moves classifier/softmax/rmsnorm_bwd to CPU, which can be faster on some hardware:
+
+| Config | Forward ms/step | TFLOPS |
+|--------|----------------|--------|
+| With ANE extras | 15.0 | 2.89 |
+| Without ANE extras | 11.7 | 3.71 |
+
 ## Model Details
 
 Default model: Stories 110M (LLaMA architecture)
