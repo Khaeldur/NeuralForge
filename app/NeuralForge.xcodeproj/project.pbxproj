@@ -1,0 +1,318 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* NeuralForgeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001; };
+		A10000000000000000000002 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002; };
+		A10000000000000000000003 /* ProjectListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003; };
+		A10000000000000000000004 /* ProjectDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004; };
+		A10000000000000000000005 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005; };
+		A10000000000000000000006 /* TrainingConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006; };
+		A10000000000000000000007 /* DataImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000007; };
+		A10000000000000000000008 /* ExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008; };
+		A10000000000000000000009 /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009; };
+		A10000000000000000000010 /* TrainingProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010; };
+		A10000000000000000000011 /* CLIRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011; };
+		A10000000000000000000012 /* ProjectManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012; };
+		A10000000000000000000013 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013; };
+		A10000000000000000000014 /* DocumentImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A20000000000000000000001 /* NeuralForgeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeuralForgeApp.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
+		A20000000000000000000003 /* ProjectListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectListView.swift; sourceTree = "<group>"; };
+		A20000000000000000000004 /* ProjectDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDetailView.swift; sourceTree = "<group>"; };
+		A20000000000000000000005 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		A20000000000000000000006 /* TrainingConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingConfigView.swift; sourceTree = "<group>"; };
+		A20000000000000000000007 /* DataImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataImportView.swift; sourceTree = "<group>"; };
+		A20000000000000000000008 /* ExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportView.swift; sourceTree = "<group>"; };
+		A20000000000000000000009 /* Project.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
+		A20000000000000000000010 /* TrainingProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingProgress.swift; sourceTree = "<group>"; };
+		A20000000000000000000011 /* CLIRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIRunner.swift; sourceTree = "<group>"; };
+		A20000000000000000000012 /* ProjectManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectManager.swift; sourceTree = "<group>"; };
+		A20000000000000000000013 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A20000000000000000000014 /* DocumentImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentImporter.swift; sourceTree = "<group>"; };
+		A20000000000000000000015 /* NeuralForge.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NeuralForge.entitlements; sourceTree = "<group>"; };
+		A30000000000000000000001 /* NeuralForge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NeuralForge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A40000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A50000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A50000000000000000000002 /* NeuralForge */,
+				A50000000000000000000006 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A50000000000000000000002 /* NeuralForge */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000001 /* NeuralForgeApp.swift */,
+				A20000000000000000000015 /* NeuralForge.entitlements */,
+				A50000000000000000000003 /* Models */,
+				A50000000000000000000004 /* Views */,
+				A50000000000000000000005 /* Services */,
+				A20000000000000000000013 /* Assets.xcassets */,
+			);
+			path = NeuralForge;
+			sourceTree = "<group>";
+		};
+		A50000000000000000000003 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000009 /* Project.swift */,
+				A20000000000000000000010 /* TrainingProgress.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A50000000000000000000004 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000002 /* MainView.swift */,
+				A20000000000000000000003 /* ProjectListView.swift */,
+				A20000000000000000000004 /* ProjectDetailView.swift */,
+				A20000000000000000000005 /* DashboardView.swift */,
+				A20000000000000000000006 /* TrainingConfigView.swift */,
+				A20000000000000000000007 /* DataImportView.swift */,
+				A20000000000000000000008 /* ExportView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A50000000000000000000005 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000011 /* CLIRunner.swift */,
+				A20000000000000000000012 /* ProjectManager.swift */,
+				A20000000000000000000014 /* DocumentImporter.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A50000000000000000000006 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A30000000000000000000001 /* NeuralForge.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A60000000000000000000001 /* NeuralForge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A80000000000000000000003 /* Build configuration list for PBXNativeTarget "NeuralForge" */;
+			buildPhases = (
+				A70000000000000000000001 /* Sources */,
+				A40000000000000000000001 /* Frameworks */,
+				A70000000000000000000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NeuralForge;
+			productName = NeuralForge;
+			productReference = A30000000000000000000001 /* NeuralForge.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A90000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+			};
+			buildConfigurationList = A80000000000000000000001 /* Build configuration list for PBXProject "NeuralForge" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A50000000000000000000001;
+			productRefGroup = A50000000000000000000006 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A60000000000000000000001 /* NeuralForge */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A70000000000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000013 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A70000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000001 /* NeuralForgeApp.swift in Sources */,
+				A10000000000000000000002 /* MainView.swift in Sources */,
+				A10000000000000000000003 /* ProjectListView.swift in Sources */,
+				A10000000000000000000004 /* ProjectDetailView.swift in Sources */,
+				A10000000000000000000005 /* DashboardView.swift in Sources */,
+				A10000000000000000000006 /* TrainingConfigView.swift in Sources */,
+				A10000000000000000000007 /* DataImportView.swift in Sources */,
+				A10000000000000000000008 /* ExportView.swift in Sources */,
+				A10000000000000000000009 /* Project.swift in Sources */,
+				A10000000000000000000010 /* TrainingProgress.swift in Sources */,
+				A10000000000000000000011 /* CLIRunner.swift in Sources */,
+				A10000000000000000000012 /* ProjectManager.swift in Sources */,
+				A10000000000000000000014 /* DocumentImporter.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A80000000000000000000010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A80000000000000000000011 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		A80000000000000000000020 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.neuralforge.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A80000000000000000000021 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.neuralforge.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A80000000000000000000001 /* Build configuration list for PBXProject "NeuralForge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A80000000000000000000010 /* Debug */,
+				A80000000000000000000011 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A80000000000000000000003 /* Build configuration list for PBXNativeTarget "NeuralForge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A80000000000000000000020 /* Debug */,
+				A80000000000000000000021 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = A90000000000000000000001 /* Project object */;
+}

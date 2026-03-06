@@ -1,0 +1,30 @@
+# Build artifacts
+cli/neuralforge
+cli/test_cli
+cli/test_cli.dSYM/
+app/Tests/test_swift
+*.o
+*.dylib
+
+# Xcode
+build/
+DerivedData/
+*.xcworkspace
+xcuserdata/
+*.xcuserstate
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Model files (large binaries)
+*.bin
+*.gguf
+*.mlpackage/
+*.mlmodelc/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
