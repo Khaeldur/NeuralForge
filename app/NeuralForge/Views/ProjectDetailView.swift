@@ -1,4 +1,4 @@
-// ProjectDetailView.swift — Tab view for config, dashboard, export
+// ProjectDetailView.swift — Sidebar + detail navigation for project features
 
 import SwiftUI
 
@@ -7,64 +7,68 @@ struct ProjectDetailView: View {
     @State private var selectedTab = "dashboard"
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            DashboardView(project: $project)
-                .tabItem { Label("Dashboard", systemImage: "chart.line.uptrend.xyaxis") }
-                .tag("dashboard")
+        HSplitView {
+            // Left sidebar with grouped navigation
+            List(selection: $selectedTab) {
+                Section("Training") {
+                    sidebarItem("Dashboard", icon: "chart.line.uptrend.xyaxis", tag: "dashboard")
+                    sidebarItem("Config", icon: "slider.horizontal.3", tag: "config")
+                    sidebarItem("Data", icon: "doc.text", tag: "data")
+                    sidebarItem("Generate", icon: "text.bubble", tag: "generate")
+                    sidebarItem("Export", icon: "square.and.arrow.up", tag: "export")
+                }
 
-            TrainingConfigView(project: $project)
-                .tabItem { Label("Config", systemImage: "slider.horizontal.3") }
-                .tag("config")
+                Section("Data & Models") {
+                    sidebarItem("Models", icon: "square.grid.2x2", tag: "models")
+                    sidebarItem("Ingest", icon: "tray.and.arrow.down", tag: "ingest")
+                    sidebarItem("History", icon: "clock.arrow.circlepath", tag: "history")
+                    sidebarItem("Benchmarks", icon: "gauge.with.dots.needle.33percent", tag: "benchmarks")
+                }
 
-            DataImportView(project: $project)
-                .tabItem { Label("Data", systemImage: "doc.text") }
-                .tag("data")
+                Section("Tools") {
+                    sidebarItem("Assistant", icon: "brain", tag: "assistant")
+                    sidebarItem("Sync", icon: "arrow.triangle.2.circlepath", tag: "sync")
+                    sidebarItem("Cluster", icon: "server.rack", tag: "cluster")
+                }
 
-            ModelCardView(project: $project)
-                .tabItem { Label("Models", systemImage: "square.grid.2x2") }
-                .tag("models")
+                Section("Compliance") {
+                    sidebarItem("Audit", icon: "shield.checkered", tag: "audit")
+                    sidebarItem("Reports", icon: "doc.text.magnifyingglass", tag: "reports")
+                }
+            }
+            .listStyle(.sidebar)
+            .frame(minWidth: 160, idealWidth: 180, maxWidth: 220)
 
-            IngestView(project: $project)
-                .tabItem { Label("Ingest", systemImage: "tray.and.arrow.down") }
-                .tag("ingest")
-
-            GenerateView(project: $project)
-                .tabItem { Label("Generate", systemImage: "text.bubble") }
-                .tag("generate")
-
-            AssistantView(project: $project)
-                .tabItem { Label("Assistant", systemImage: "brain") }
-                .tag("assistant")
-
-            AuditDashboardView(project: $project)
-                .tabItem { Label("Audit", systemImage: "shield.checkered") }
-                .tag("audit")
-
-            ComplianceReportView(project: $project)
-                .tabItem { Label("Reports", systemImage: "doc.text.magnifyingglass") }
-                .tag("reports")
-
-            SyncDashboardView(project: $project)
-                .tabItem { Label("Sync", systemImage: "arrow.triangle.2.circlepath") }
-                .tag("sync")
-
-            ComputeClusterView(project: $project)
-                .tabItem { Label("Cluster", systemImage: "server.rack") }
-                .tag("cluster")
-
-            TrainingHistoryView(project: $project)
-                .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
-                .tag("history")
-
-            BenchmarkView(project: $project)
-                .tabItem { Label("Benchmarks", systemImage: "gauge.with.dots.needle.33percent") }
-                .tag("benchmarks")
-
-            ExportView(project: $project)
-                .tabItem { Label("Export", systemImage: "square.and.arrow.up") }
-                .tag("export")
+            // Right content area
+            detailContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding()
         .navigationTitle(project.name)
+    }
+
+    private func sidebarItem(_ title: String, icon: String, tag: String) -> some View {
+        Label(title, systemImage: icon)
+            .tag(tag)
+    }
+
+    @ViewBuilder
+    private var detailContent: some View {
+        switch selectedTab {
+        case "dashboard":   DashboardView(project: $project)
+        case "config":      TrainingConfigView(project: $project)
+        case "data":        DataImportView(project: $project)
+        case "models":      ModelCardView(project: $project)
+        case "ingest":      IngestView(project: $project)
+        case "generate":    GenerateView(project: $project)
+        case "assistant":   AssistantView(project: $project)
+        case "audit":       AuditDashboardView(project: $project)
+        case "reports":     ComplianceReportView(project: $project)
+        case "sync":        SyncDashboardView(project: $project)
+        case "cluster":     ComputeClusterView(project: $project)
+        case "history":     TrainingHistoryView(project: $project)
+        case "benchmarks":  BenchmarkView(project: $project)
+        case "export":      ExportView(project: $project)
+        default:            DashboardView(project: $project)
+        }
     }
 }
