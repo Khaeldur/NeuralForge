@@ -107,23 +107,77 @@ static float cross_entropy_loss(float *dlogits, const float *logits, const uint1
     return total_loss / S;
 }
 
-// Embedding lookup: token_ids → x [DIM, SEQ] (channel-first)
-// embed is [VOCAB, DIM] row-major (vocab_size rows, dim cols)
-static void embed_lookup(float *x, const float *embed, const uint16_t *tokens, int dim, int seq) {
+// Embedding lookup: token_ids → x [dim, seq] (channel-first)
+// embed is [vocab, dim] row-major (vocab_size rows, dim cols)
+static void embed_lookup(float *x, const float *embed, const uint16_t *tokens, int dim, int seq, int vocab) {
     for (int t = 0; t < seq; t++) {
         int tok = tokens[t];
-        if (tok < 0 || tok >= VOCAB) { fprintf(stderr, "WARN: token %d out of range [0,%d)\n", tok, VOCAB); continue; }
+        if (tok >= vocab) {
+            fprintf(stderr, "WARN: token %d out of range [0,%d)\n", tok, vocab);
+            for (int d = 0; d < dim; d++) x[d*seq + t] = 0.0f;  // zero out to prevent uninitialized propagation
+            continue;
+        }
         for (int d = 0; d < dim; d++) {
             x[d*seq + t] = embed[tok*dim + d];
         }
     }
 }
 
+// LoRA forward: output += (B @ A @ input) * scale
+// input:  [in_dim, seq]  column-major
+// output: [out_dim, seq] column-major (modified in-place)
+// A: [rank, in_dim] row-major
+// B: [out_dim, rank] row-major
+// scale = alpha / rank
+static void lora_forward(float *output, const float *input,
+                          const float *A, const float *B,
+                          int in_dim, int out_dim, int rank, float scale, int seq) {
+    float *temp = (float*)malloc((size_t)rank * seq * 4);
+    // temp[rank, seq] = A[rank, in_dim] @ input[in_dim, seq]
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                rank, seq, in_dim, 1.0f, A, in_dim, input, seq, 0.0f, temp, seq);
+    // output[out_dim, seq] += B[out_dim, rank] @ temp[rank, seq] * scale
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                out_dim, seq, rank, scale, B, rank, temp, seq, 1.0f, output, seq);
+    free(temp);
+}
+
+// LoRA backward: compute grad_A, grad_B (accumulated)
+// grad_output: [out_dim, seq] — gradient w.r.t. layer output
+// input: [in_dim, seq] — saved activation (e.g. attn_out for Wo)
+// Returns: grad_A [rank, in_dim], grad_B [out_dim, rank] (accumulated)
+static void lora_backward(float *grad_A, float *grad_B,
+                            const float *grad_output, const float *input,
+                            const float *A, const float *B,
+                            int in_dim, int out_dim, int rank, float scale, int seq) {
+    // Forward was: temp = A @ input; delta = B @ temp * scale
+    // Recompute temp for backward
+    float *temp = (float*)malloc((size_t)rank * seq * 4);
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                rank, seq, in_dim, 1.0f, A, in_dim, input, seq, 0.0f, temp, seq);
+
+    // grad_B[out_dim, rank] += scale * grad_output[out_dim, seq] @ temp^T[seq, rank]
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+                out_dim, rank, seq, scale, grad_output, seq, temp, seq, 1.0f, grad_B, rank);
+
+    // d_temp[rank, seq] = scale * B^T[rank, out_dim] @ grad_output[out_dim, seq]
+    float *d_temp = (float*)malloc((size_t)rank * seq * 4);
+    cblas_sgemm(CblasRowMajor, CblasTrans, CblasNoTrans,
+                rank, seq, out_dim, scale, B, rank, grad_output, seq, 0.0f, d_temp, seq);
+
+    // grad_A[rank, in_dim] += d_temp[rank, seq] @ input^T[seq, in_dim]
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+                rank, in_dim, seq, 1.0f, d_temp, seq, input, seq, 1.0f, grad_A, in_dim);
+
+    free(temp);
+    free(d_temp);
+}
+
 // Embedding backward: accumulate dE[tok] += dx[:,t] for each position
-static void embed_backward(float *d_embed, const float *dx, const uint16_t *tokens, int dim, int seq) {
+static void embed_backward(float *d_embed, const float *dx, const uint16_t *tokens, int dim, int seq, int vocab) {
     for (int t = 0; t < seq; t++) {
         int tok = tokens[t];
-        if (tok < 0 || tok >= VOCAB) { continue; }
+        if (tok < 0 || tok >= vocab) { continue; }
         for (int d = 0; d < dim; d++) {
             d_embed[tok*dim + d] += dx[d*seq + t];
         }

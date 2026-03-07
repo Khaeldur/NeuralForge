@@ -272,15 +272,13 @@ static NSString *gen_sdpa_bwd2(void) {
     return m;
 }
 
-// Mask blob (causal mask [SEQ,SEQ])
-static NSData *g_mask_blob = nil;
+// Mask blob (causal mask [SEQ,SEQ]) — not cached since SEQ is runtime
 static NSData *get_mask_blob(void) {
-    if (!g_mask_blob) {
-        _Float16 *mask = (_Float16*)calloc(SEQ*SEQ, sizeof(_Float16));
-        for(int t=0;t<SEQ;t++) for(int t2=0;t2<SEQ;t2++)
-            mask[t*SEQ+t2] = (t2<=t) ? (_Float16)0.0f : (_Float16)(-65504.0f);
-        g_mask_blob = build_blob_fp16(mask, SEQ*SEQ);
-        free(mask);
-    }
-    return g_mask_blob;
+    int S = SEQ;
+    _Float16 *mask = (_Float16*)calloc(S*S, sizeof(_Float16));
+    for(int t=0;t<S;t++) for(int t2=0;t2<S;t2++)
+        mask[t*S+t2] = (t2<=t) ? (_Float16)0.0f : (_Float16)(-65504.0f);
+    NSData *blob = build_blob_fp16(mask, S*S);
+    free(mask);
+    return blob;
 }

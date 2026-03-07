@@ -1,4 +1,4 @@
-// stories_config.h — Stories110M model config and structures
+// stories_config.h — Model config and structures (runtime-sized)
 #pragma once
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
@@ -14,37 +14,83 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-// Stories110M config
-#define DIM 768
-#define HIDDEN 2048
-#define HEADS 12
-#define HD (DIM/HEADS)
-#define SEQ 256
-#define NLAYERS 12
-#define VOCAB 32000
+// ===== Runtime Model Configuration =====
+// Dimensions are read from the model file header at startup.
+// This replaces the old compile-time #defines (DIM=768, etc.)
+typedef struct {
+    int dim;           // embedding dimension (was 768)
+    int hidden_dim;    // FFN hidden dimension (was 2048)
+    int n_heads;       // number of attention heads (was 12)
+    int head_dim;      // dim / n_heads (was 64)
+    int seq_len;       // sequence length (was 256)
+    int n_layers;      // number of transformer layers (was 12)
+    int vocab_size;    // vocabulary size (was 32000)
+    // Derived sizes (computed by model_config_init)
+    int wq_sz, wo_sz;        // dim * dim
+    int w1_sz, w2_sz, w3_sz; // hidden * dim / dim * hidden
+    int score_ch;             // n_heads * seq_len
+    int layer_params;         // total params per layer
+    int total_params;         // total model params
+} ModelConfig;
+
+static ModelConfig g_mc;
+
+// Validate model dimensions against sane upper bounds.
+// Returns false if any dimension is out of range (prevents integer overflow,
+// stack overflow from VLAs, and heap corruption from malicious model files).
+static inline bool model_config_validate(const ModelConfig *mc) {
+    if (mc->dim < 1 || mc->dim > 16384) return false;
+    if (mc->hidden_dim < 1 || mc->hidden_dim > 65536) return false;
+    if (mc->n_heads < 1 || mc->n_heads > 256) return false;
+    if (mc->seq_len < 1 || mc->seq_len > 8192) return false;
+    if (mc->n_layers < 1 || mc->n_layers > 256) return false;
+    if (mc->vocab_size < 1 || mc->vocab_size > 200000) return false;
+    if (mc->dim % mc->n_heads != 0) return false;  // head_dim must be integer
+    return true;
+}
+
+static inline void model_config_init(ModelConfig *mc) {
+    mc->head_dim = mc->dim / mc->n_heads;
+    mc->wq_sz = mc->dim * mc->dim;
+    mc->wo_sz = mc->dim * mc->dim;
+    mc->w1_sz = mc->hidden_dim * mc->dim;
+    mc->w2_sz = mc->dim * mc->hidden_dim;
+    mc->w3_sz = mc->hidden_dim * mc->dim;
+    mc->score_ch = mc->n_heads * mc->seq_len;
+    mc->layer_params = 4 * mc->wq_sz + mc->w1_sz + mc->w2_sz + mc->w3_sz + 2 * mc->dim;
+    mc->total_params = mc->n_layers * mc->layer_params + mc->dim + mc->vocab_size * mc->dim;
+}
+
+// Set g_mc to Stories110M defaults (used by tests and as fallback)
+static inline void model_config_defaults(void) {
+    g_mc.dim = 768; g_mc.hidden_dim = 2048; g_mc.n_heads = 12;
+    g_mc.seq_len = 256; g_mc.n_layers = 12; g_mc.vocab_size = 32000;
+    model_config_init(&g_mc);
+}
+
+// Backward-compatible macros — all code using DIM, HIDDEN, etc.
+// now resolves to the runtime values in g_mc.
+#define DIM       (g_mc.dim)
+#define HIDDEN    (g_mc.hidden_dim)
+#define HEADS     (g_mc.n_heads)
+#define HD        (g_mc.head_dim)
+#define SEQ       (g_mc.seq_len)
+#define NLAYERS   (g_mc.n_layers)
+#define VOCAB     (g_mc.vocab_size)
+#define WQ_SZ     (g_mc.wq_sz)
+#define WO_SZ     (g_mc.wo_sz)
+#define W1_SZ     (g_mc.w1_sz)
+#define W2_SZ     (g_mc.w2_sz)
+#define W3_SZ     (g_mc.w3_sz)
+#define SCORE_CH  (g_mc.score_ch)
+#define LAYER_PARAMS (g_mc.layer_params)
+#define TOTAL_PARAMS (g_mc.total_params)
+
+// Non-model constants (these stay compile-time)
 #define ACCUM_STEPS 10
 #define MAX_COMPILES 100
-
-// Per compile: 5 weight-bearing kernels per layer + 1 classifier = 5*12+1 = 61
-// Plus 1 static (sdpaBwd2 per layer, no weights) = 12 more but those are weight-free
-// Actually sdpaBwd2 has no weights, compile once per layer
-// Weight-bearing: fwdAttn(1) + fwdFFN(1) + ffnBwd(1) + sdpaBwd1(1) + qkvBwd(1) = 5 per layer
-// 5 * 12 = 60 weight-bearing compiles per batch
-// With MAX_COMPILES=100, we get 1 batch of ACCUM_STEPS before restart
 #define KERNELS_PER_LAYER 5
 #define TOTAL_WEIGHT_KERNELS (KERNELS_PER_LAYER * NLAYERS)
-
-// Attention score channels for SDPA backward
-#define SCORE_CH (HEADS*SEQ)
-
-// Weight sizes per layer
-#define WQ_SZ (DIM*DIM)
-#define WO_SZ (DIM*DIM)
-#define W1_SZ (HIDDEN*DIM)
-#define W2_SZ (DIM*HIDDEN)
-#define W3_SZ (HIDDEN*DIM)
-#define LAYER_PARAMS (4*WQ_SZ + W1_SZ + W2_SZ + W3_SZ + 2*DIM)
-#define TOTAL_PARAMS (NLAYERS * LAYER_PARAMS + DIM + VOCAB*DIM)  // +rms_final+embed
 
 // Per-layer weight and optimizer state
 typedef struct {
@@ -108,6 +154,33 @@ typedef struct {
 typedef struct {
     int dim, hidden_dim, n_layers, n_heads, n_kv_heads, vocab_size, seq_len;
 } Llama2Config;
+
+// LoRA adapter: low-rank decomposition W_delta = B @ A * (alpha/rank)
+typedef struct {
+    float *A;    // [rank, in_dim] — initialized with kaiming uniform
+    float *B;    // [out_dim, rank] — initialized to zero
+    int rank, in_dim, out_dim;
+} LoRAAdapter;
+
+typedef struct {
+    LoRAAdapter wo;  // Wo adapter (currently supported target)
+} LayerLoRA;
+
+typedef struct {
+    AdamState A, B;
+} LoRAAdam;
+
+typedef struct {
+    LoRAAdam wo;
+} LayerLoRAAdam;
+
+typedef struct {
+    float *A, *B;
+} LoRAGrad;
+
+typedef struct {
+    LoRAGrad wo;
+} LayerLoRAGrad;
 
 // Globals
 static Class g_D, g_I, g_AR, g_AIO;
@@ -186,4 +259,60 @@ static void layer_grads_free(LayerGrads *g) {
     free(g->Wq);free(g->Wk);free(g->Wv);free(g->Wo);
     free(g->W1);free(g->W2);free(g->W3);
     free(g->rms_att);free(g->rms_ffn);
+}
+
+// LoRA alloc/free helpers
+static LoRAAdapter lora_adapter_alloc(int rank, int in_dim, int out_dim) {
+    LoRAAdapter a;
+    a.rank = rank; a.in_dim = in_dim; a.out_dim = out_dim;
+    a.A = (float*)malloc((size_t)rank * in_dim * 4);
+    a.B = (float*)calloc((size_t)out_dim * rank, 4);  // B starts at zero
+    // Kaiming uniform init for A: U(-sqrt(1/rank), sqrt(1/rank))
+    float scale = 1.0f / sqrtf((float)rank);
+    for (size_t i = 0; i < (size_t)rank * in_dim; i++)
+        a.A[i] = scale * (2.0f * (float)drand48() - 1.0f);
+    return a;
+}
+static void lora_adapter_free(LoRAAdapter *a) { free(a->A); free(a->B); }
+
+static LayerLoRA layer_lora_alloc(int rank, int lora_targets) {
+    LayerLoRA l;
+    memset(&l, 0, sizeof(l));
+    if (lora_targets & 8) l.wo = lora_adapter_alloc(rank, DIM, DIM);
+    return l;
+}
+static void layer_lora_free(LayerLoRA *l, int lora_targets) {
+    if (lora_targets & 8) lora_adapter_free(&l->wo);
+}
+
+static LayerLoRAAdam layer_lora_adam_alloc(int rank, int lora_targets) {
+    LayerLoRAAdam a;
+    memset(&a, 0, sizeof(a));
+    if (lora_targets & 8) {
+        a.wo.A = adam_alloc((size_t)rank * DIM);
+        a.wo.B = adam_alloc((size_t)DIM * rank);
+    }
+    return a;
+}
+static void layer_lora_adam_free(LayerLoRAAdam *a, int lora_targets) {
+    if (lora_targets & 8) { adam_free(&a->wo.A); adam_free(&a->wo.B); }
+}
+
+static LayerLoRAGrad layer_lora_grad_alloc(int rank, int lora_targets) {
+    LayerLoRAGrad g;
+    memset(&g, 0, sizeof(g));
+    if (lora_targets & 8) {
+        g.wo.A = (float*)calloc((size_t)rank * DIM, 4);
+        g.wo.B = (float*)calloc((size_t)DIM * rank, 4);
+    }
+    return g;
+}
+static void layer_lora_grad_zero(LayerLoRAGrad *g, int rank, int lora_targets) {
+    if (lora_targets & 8) {
+        memset(g->wo.A, 0, (size_t)rank * DIM * 4);
+        memset(g->wo.B, 0, (size_t)DIM * rank * 4);
+    }
+}
+static void layer_lora_grad_free(LayerLoRAGrad *g, int lora_targets) {
+    if (lora_targets & 8) { free(g->wo.A); free(g->wo.B); }
 }

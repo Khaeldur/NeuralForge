@@ -44,4 +44,20 @@ struct TrainingConfig: Codable {
     var eps: Double = 1e-8
     var useANEExtras: Bool = true
     var seed: Int = 42
+
+    // LR Scheduler
+    var warmupSteps: Int = 0
+    var lrMin: Double = 1e-5
+    var lrSchedule: String = "none"  // "none" or "cosine"
+
+    // Data Pipeline
+    var valDataPath: String = ""
+    var valEvery: Int = 0       // 0 = disabled
+    var valBatches: Int = 10
+    var shuffle: Bool = false
+
+    // LoRA
+    var loraRank: Int = 0       // 0 = full fine-tune, 4-64 typical
+    var loraAlpha: Double = 16.0
+    var loraTargets: Int = 8    // bitmask: 8 = Wo only
 }

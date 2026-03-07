@@ -6,6 +6,8 @@ import Charts
 struct DashboardView: View {
     @Binding var project: NFProject
     @EnvironmentObject var cliRunner: CLIRunner
+    @State private var showSmoothed = true
+    @State private var chartWindowSize = 0  // 0 = all steps
 
     var state: TrainingState { cliRunner.state }
 
@@ -75,25 +77,116 @@ struct DashboardView: View {
                 .tint(.blue)
             }
 
-            // Loss curve
-            GroupBox("Loss Curve") {
+            // Compiling banner
+            if state.phase == .compiling {
+                TimelineView(.periodic(from: .now, by: 1.0)) { context in
+                    HStack(spacing: 10) {
+                        ProgressView()
+                            .controlSize(.small)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(state.restartCount > 0
+                                 ? "Recompiling ANE kernels… \(Int(state.compileElapsed))s"
+                                 : "Compiling ANE kernels… \(Int(state.compileElapsed))s")
+                                .font(.callout.bold())
+                            Text(state.restartCount > 0
+                                 ? "Neural Engine kernel budget reached — restarting (this is normal)"
+                                 : "First launch takes ~20-30 seconds while the Neural Engine compiles")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(12)
+                    .background(.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                }
+            }
+
+            // Loss curve with EMA + val overlay
+            GroupBox {
                 if state.lossHistory.isEmpty {
                     ContentUnavailableView("No training data yet", systemImage: "chart.line.uptrend.xyaxis")
                         .frame(height: 250)
                 } else {
                     Chart {
-                        ForEach(Array(state.lossHistory.enumerated()), id: \.offset) { _, point in
+                        // Raw loss (thin, translucent)
+                        ForEach(Array(visibleLoss.enumerated()), id: \.offset) { _, point in
                             LineMark(
                                 x: .value("Step", point.step),
-                                y: .value("Loss", point.loss)
+                                y: .value("Loss", point.loss),
+                                series: .value("Series", "Raw")
                             )
-                            .foregroundStyle(.blue.gradient)
+                            .foregroundStyle(.blue.opacity(showSmoothed ? 0.25 : 1.0))
+                            .lineStyle(StrokeStyle(lineWidth: 1))
+                        }
+                        // EMA smoothed loss (thick)
+                        if showSmoothed {
+                            ForEach(Array(visibleEMA.enumerated()), id: \.offset) { _, point in
+                                LineMark(
+                                    x: .value("Step", point.step),
+                                    y: .value("Loss", point.loss),
+                                    series: .value("Series", "Smoothed")
+                                )
+                                .foregroundStyle(.blue)
+                                .lineStyle(StrokeStyle(lineWidth: 2))
+                            }
+                        }
+                        // Validation loss overlay (dashed, orange)
+                        ForEach(Array(visibleVal.enumerated()), id: \.offset) { _, point in
+                            LineMark(
+                                x: .value("Step", point.step),
+                                y: .value("Loss", point.loss),
+                                series: .value("Series", "Validation")
+                            )
+                            .foregroundStyle(.orange)
+                            .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 3]))
                         }
                     }
                     .chartYScale(domain: .automatic(includesZero: false))
                     .chartXAxisLabel("Step")
                     .chartYAxisLabel("Loss")
                     .frame(height: 250)
+                }
+            } label: {
+                HStack {
+                    Text("Loss Curve")
+                    Spacer()
+                    if !state.valLossHistory.isEmpty {
+                        HStack(spacing: 4) {
+                            Circle().fill(.orange).frame(width: 6, height: 6)
+                            Text("Val").font(.caption2)
+                        }
+                    }
+                    Toggle("EMA", isOn: $showSmoothed)
+                        .toggleStyle(.switch)
+                        .controlSize(.mini)
+                        .fixedSize()
+                    Picker("Window", selection: $chartWindowSize) {
+                        Text("All").tag(0)
+                        Text("500").tag(500)
+                        Text("1K").tag(1000)
+                        Text("2K").tag(2000)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 180)
+                }
+            }
+
+            // TFLOPS chart
+            if !state.tflopsHistory.isEmpty {
+                GroupBox("ANE TFLOPS") {
+                    Chart {
+                        ForEach(Array(visibleTflops.enumerated()), id: \.offset) { _, point in
+                            LineMark(
+                                x: .value("Step", point.step),
+                                y: .value("TFLOPS", point.tflops)
+                            )
+                            .foregroundStyle(.green.gradient)
+                        }
+                    }
+                    .chartYScale(domain: .automatic(includesZero: false))
+                    .chartXAxisLabel("Step")
+                    .chartYAxisLabel("TFLOPS")
+                    .frame(height: 100)
                 }
             }
 
@@ -117,12 +210,24 @@ struct DashboardView: View {
     @ViewBuilder
     var statusBadge: some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(statusColor)
-                .frame(width: 8, height: 8)
+            if state.phase == .compiling {
+                ProgressView()
+                    .controlSize(.mini)
+            } else {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 8, height: 8)
+            }
             Text(state.phase.rawValue.capitalized)
                 .font(.subheadline.bold())
                 .foregroundStyle(.secondary)
+            if state.phase == .compiling {
+                TimelineView(.periodic(from: .now, by: 1.0)) { context in
+                    Text("\(Int(state.compileElapsed))s")
+                        .font(.subheadline.monospacedDigit().bold())
+                        .foregroundStyle(.orange)
+                }
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
@@ -132,6 +237,31 @@ struct DashboardView: View {
     var checkpointLabel: String {
         guard let path = state.lastCheckpoint else { return "--" }
         return URL(fileURLWithPath: path).lastPathComponent
+    }
+
+    // MARK: – Chart window filtering
+
+    var visibleLoss: [(step: Int, loss: Double)] {
+        guard chartWindowSize > 0 else { return state.lossHistory }
+        return Array(state.lossHistory.suffix(chartWindowSize))
+    }
+
+    var visibleEMA: [(step: Int, loss: Double)] {
+        guard chartWindowSize > 0 else { return state.emaLossHistory }
+        return Array(state.emaLossHistory.suffix(chartWindowSize))
+    }
+
+    var visibleVal: [(step: Int, loss: Double)] {
+        guard chartWindowSize > 0 else { return state.valLossHistory }
+        if let minStep = visibleLoss.first?.step {
+            return state.valLossHistory.filter { $0.step >= minStep }
+        }
+        return state.valLossHistory
+    }
+
+    var visibleTflops: [(step: Int, tflops: Double)] {
+        guard chartWindowSize > 0 else { return state.tflopsHistory }
+        return Array(state.tflopsHistory.suffix(chartWindowSize))
     }
 
     func formatTime(_ seconds: Double) -> String {

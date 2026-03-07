@@ -90,6 +90,98 @@ struct TrainingConfigView: View {
                 }
             }
 
+            Section("LR Schedule") {
+                Picker("Schedule", selection: $project.config.lrSchedule) {
+                    Text("Constant").tag("none")
+                    Text("Cosine Annealing").tag("cosine")
+                }
+                .pickerStyle(.segmented)
+
+                HStack {
+                    Text("Warmup Steps")
+                    Spacer()
+                    TextField("", value: $project.config.warmupSteps, format: .number)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                }
+
+                if project.config.lrSchedule == "cosine" {
+                    VStack(alignment: .leading) {
+                        HStack {
+                            Text("Min Learning Rate")
+                            Spacer()
+                            Text(String(format: "%.1e", project.config.lrMin))
+                                .monospacedDigit()
+                        }
+                        Slider(value: $project.config.lrMin, in: 0...1e-3)
+                    }
+                }
+            }
+
+            Section("Data Pipeline") {
+                FilePickerRow(label: "Validation Data", path: $project.config.valDataPath,
+                              allowedTypes: ["bin"])
+
+                HStack {
+                    Text("Validate Every")
+                    Spacer()
+                    TextField("Steps", value: $project.config.valEvery, format: .number)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                    Text("batches")
+                        .foregroundStyle(.secondary)
+                }
+
+                if project.config.valEvery > 0 {
+                    HStack {
+                        Text("Val Batch Count")
+                        Spacer()
+                        TextField("", value: $project.config.valBatches, format: .number)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 80)
+                    }
+                }
+
+                Toggle("Shuffle Data", isOn: $project.config.shuffle)
+            }
+
+            Section("LoRA Fine-Tuning") {
+                Picker("Mode", selection: $project.config.loraRank) {
+                    Text("Full Fine-Tune").tag(0)
+                    Text("LoRA r=4").tag(4)
+                    Text("LoRA r=8").tag(8)
+                    Text("LoRA r=16").tag(16)
+                    Text("LoRA r=32").tag(32)
+                    Text("LoRA r=64").tag(64)
+                }
+
+                if project.config.loraRank > 0 {
+                    HStack {
+                        Text("Alpha")
+                        Spacer()
+                        TextField("Alpha", value: $project.config.loraAlpha, format: .number)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 80)
+                    }
+
+                    let loraParams = 2 * 768 * project.config.loraRank * 12
+                    HStack {
+                        Text("LoRA Parameters")
+                        Spacer()
+                        Text("\(loraParams.formatted()) (\(String(format: "%.2f", Double(loraParams) / 110e6 * 100))%)")
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+
+                    HStack {
+                        Text("Target")
+                        Spacer()
+                        Text("Wo (attention output)")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
             Section("Hardware") {
                 Toggle("ANE Extras (classifier, softmax, rmsnorm_bwd on ANE)", isOn: $project.config.useANEExtras)
             }

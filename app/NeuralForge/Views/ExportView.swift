@@ -5,10 +5,13 @@ import SwiftUI
 struct ExportView: View {
     @Binding var project: NFProject
     @EnvironmentObject var cliRunner: CLIRunner
+    @ObservedObject private var quantService = QuantizationService.shared
     @State private var selectedFormat: ExportFormat = .llama2c
+    @State private var selectedQuantType: QuantizationType = .q4_0
     @State private var isExporting = false
     @State private var exportPath: String?
     @State private var exportError: String?
+    @State private var showQuantOptions = false
 
     enum ExportFormat: String, CaseIterable {
         case llama2c = "llama2c"
@@ -150,6 +153,45 @@ struct ExportView: View {
                 .background(.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
             }
 
+            // Quantization options (GGUF only)
+            if selectedFormat == .gguf {
+                GroupBox("Quantization") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Picker("Precision", selection: $selectedQuantType) {
+                            ForEach(QuantizationType.allCases) { qt in
+                                HStack {
+                                    Text(qt.rawValue)
+                                    Text("— Q\(qt.qualityRating)/10")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .tag(qt)
+                            }
+                        }
+
+                        HStack(spacing: 16) {
+                            Label("\(String(format: "%.1f", selectedQuantType.bitsPerWeight)) bits/weight",
+                                  systemImage: "memorychip")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            let estimatedSize = QuantizationType.estimateSize(
+                                modelParams: 110_000_000,
+                                quantType: selectedQuantType)
+                            Label("~\(QuantizationType.formatSize(estimatedSize)) for 110M params",
+                                  systemImage: "doc.zipper")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+
+                        Text(selectedQuantType.description)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+
             HStack {
                 Spacer()
                 Button(action: exportModel) {
@@ -165,7 +207,55 @@ struct ExportView: View {
                 .disabled(isExporting || !hasCheckpoint)
             }
 
+            // Job history
+            if !quantService.jobs.isEmpty {
+                GroupBox("Export History") {
+                    VStack(spacing: 4) {
+                        ForEach(quantService.jobs) { job in
+                            HStack {
+                                Image(systemName: jobIcon(job.status))
+                                    .foregroundColor(jobColor(job.status))
+                                    .font(.caption)
+                                Text(job.quantType.rawValue)
+                                    .font(.caption.bold())
+                                Text(job.progress)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                if let size = job.outputSize {
+                                    Text(QuantizationType.formatSize(size))
+                                        .font(.caption2.monospaced())
+                                        .foregroundColor(.secondary)
+                                }
+                                Text(job.timestamp, style: .relative)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+
             Spacer()
+        }
+    }
+
+    private func jobIcon(_ status: QuantizationJob.JobStatus) -> String {
+        switch status {
+        case .pending: return "clock"
+        case .running: return "arrow.clockwise"
+        case .success: return "checkmark.circle.fill"
+        case .failed: return "xmark.circle.fill"
+        }
+    }
+
+    private func jobColor(_ status: QuantizationJob.JobStatus) -> Color {
+        switch status {
+        case .pending: return .secondary
+        case .running: return .blue
+        case .success: return .green
+        case .failed: return .red
         }
     }
 

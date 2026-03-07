@@ -102,10 +102,78 @@ static void nf_emit_error(const char *message, int code) {
     fflush(stdout);
 }
 
+static void nf_emit_val(int step, float val_loss, int val_batches) {
+    fprintf(stdout, "{\"type\":\"val\",\"step\":%d,\"val_loss\":%.6f,"
+            "\"val_batches\":%d}\n", step, val_loss, val_batches);
+    fflush(stdout);
+}
+
+static void nf_emit_token(int token_id, const char *text) {
+    char escaped[512];
+    nf_json_escape(text, escaped, sizeof(escaped));
+    fprintf(stdout, "{\"type\":\"token\",\"token_id\":%d,\"text\":\"%s\"}\n",
+            token_id, escaped);
+    fflush(stdout);
+}
+
+static void nf_emit_generate_done(int tokens, double total_ms) {
+    fprintf(stdout, "{\"type\":\"generate_done\",\"tokens\":%d,\"total_ms\":%.1f}\n",
+            tokens, total_ms);
+    fflush(stdout);
+}
+
+static void nf_emit_lora_info(int lora_rank, float lora_alpha, int lora_targets, int lora_params) {
+    fprintf(stdout, "{\"type\":\"info\",\"key\":\"lora\","
+            "\"value\":{\"rank\":%d,\"alpha\":%.1f,\"targets\":%d,\"params\":%d}}\n",
+            lora_rank, lora_alpha, lora_targets, lora_params);
+    fflush(stdout);
+}
+
 static void nf_emit_info(const char *key, const char *value) {
     char ek[256];
     nf_json_escape(key, ek, sizeof(ek));
     fprintf(stdout, "{\"type\":\"info\",\"key\":\"%s\",\"value\":%s}\n",
             ek, value);
+    fflush(stdout);
+}
+
+static void nf_emit_ingest_file(const char *filename, int tokens) {
+    char escaped[PATH_MAX * 2];
+    nf_json_escape(filename, escaped, sizeof(escaped));
+    fprintf(stdout, "{\"type\":\"ingest_file\",\"file\":\"%s\",\"tokens\":%d}\n",
+            escaped, tokens);
+    fflush(stdout);
+}
+
+static void nf_emit_ingest_done(int new_files, int skipped, int total_tokens,
+                                 int shards, const char *manifest_path) {
+    char escaped[PATH_MAX * 2];
+    nf_json_escape(manifest_path, escaped, sizeof(escaped));
+    fprintf(stdout, "{\"type\":\"ingest_done\",\"new_files\":%d,\"skipped\":%d,"
+            "\"total_tokens\":%d,\"shards\":%d,\"manifest\":\"%s\"}\n",
+            new_files, skipped, total_tokens, shards, escaped);
+    fflush(stdout);
+}
+
+static void nf_emit_download_progress(const char *model_name, const char *status,
+                                       int percent) {
+    char name_esc[256], status_esc[256];
+    nf_json_escape(model_name, name_esc, sizeof(name_esc));
+    nf_json_escape(status, status_esc, sizeof(status_esc));
+    fprintf(stdout, "{\"type\":\"download_progress\",\"model\":\"%s\","
+            "\"status\":\"%s\",\"percent\":%d}\n",
+            name_esc, status_esc, percent);
+    fflush(stdout);
+}
+
+static void nf_emit_download_done(const char *model_name, const char *model_path,
+                                   const char *tokenizer_path, bool success) {
+    char m_esc[256], mp_esc[PATH_MAX * 2], tp_esc[PATH_MAX * 2];
+    nf_json_escape(model_name, m_esc, sizeof(m_esc));
+    nf_json_escape(model_path ? model_path : "", mp_esc, sizeof(mp_esc));
+    nf_json_escape(tokenizer_path ? tokenizer_path : "", tp_esc, sizeof(tp_esc));
+    fprintf(stdout, "{\"type\":\"download_done\",\"model\":\"%s\","
+            "\"model_path\":\"%s\",\"tokenizer_path\":\"%s\",\"success\":%s}\n",
+            m_esc, mp_esc, tp_esc, success ? "true" : "false");
     fflush(stdout);
 }

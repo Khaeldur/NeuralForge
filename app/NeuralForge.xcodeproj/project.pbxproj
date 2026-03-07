@@ -21,6 +21,27 @@
 		A10000000000000000000012 /* ProjectManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012; };
 		A10000000000000000000013 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013; };
 		A10000000000000000000014 /* DocumentImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014; };
+		A10000000000000000000015 /* GenerateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000016; };
+		A10000000000000000000017 /* IngestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000017; };
+		A10000000000000000000018 /* ModelCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000018; };
+		A10000000000000000000019 /* NFIntelligence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000019; };
+		A10000000000000000000020 /* AssistantView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000020; };
+		A10000000000000000000021 /* AuditLogReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000021; };
+		A10000000000000000000022 /* AuditDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000022; };
+		A10000000000000000000023 /* ComplianceReportGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000023; };
+		A10000000000000000000024 /* ComplianceReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000024; };
+		A10000000000000000000025 /* SyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000025; };
+		A10000000000000000000026 /* SyncDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000026; };
+		A10000000000000000000027 /* ComputeClusterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000027; };
+		A10000000000000000000028 /* ComputeClusterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000028; };
+		A10000000000000000000029 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000029; };
+		A10000000000000000000030 /* TrainingHistoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000030; };
+		A10000000000000000000031 /* TrainingHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000031; };
+		A10000000000000000000032 /* BenchmarkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000032; };
+		A10000000000000000000033 /* BenchmarkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000033; };
+		A10000000000000000000034 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000034; };
+		A10000000000000000000035 /* MenuBarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000035; };
+		A10000000000000000000036 /* QuantizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000036; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +60,27 @@
 		A20000000000000000000013 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000000000000000000014 /* DocumentImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentImporter.swift; sourceTree = "<group>"; };
 		A20000000000000000000015 /* NeuralForge.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NeuralForge.entitlements; sourceTree = "<group>"; };
+		A20000000000000000000016 /* GenerateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateView.swift; sourceTree = "<group>"; };
+		A20000000000000000000017 /* IngestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngestView.swift; sourceTree = "<group>"; };
+		A20000000000000000000018 /* ModelCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelCardView.swift; sourceTree = "<group>"; };
+		A20000000000000000000019 /* NFIntelligence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NFIntelligence.swift; sourceTree = "<group>"; };
+		A20000000000000000000020 /* AssistantView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantView.swift; sourceTree = "<group>"; };
+		A20000000000000000000021 /* AuditLogReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuditLogReader.swift; sourceTree = "<group>"; };
+		A20000000000000000000022 /* AuditDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuditDashboardView.swift; sourceTree = "<group>"; };
+		A20000000000000000000023 /* ComplianceReportGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplianceReportGenerator.swift; sourceTree = "<group>"; };
+		A20000000000000000000024 /* ComplianceReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplianceReportView.swift; sourceTree = "<group>"; };
+		A20000000000000000000025 /* SyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncService.swift; sourceTree = "<group>"; };
+		A20000000000000000000026 /* SyncDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncDashboardView.swift; sourceTree = "<group>"; };
+		A20000000000000000000027 /* ComputeClusterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComputeClusterService.swift; sourceTree = "<group>"; };
+		A20000000000000000000028 /* ComputeClusterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComputeClusterView.swift; sourceTree = "<group>"; };
+		A20000000000000000000029 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A20000000000000000000030 /* TrainingHistoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingHistoryService.swift; sourceTree = "<group>"; };
+		A20000000000000000000031 /* TrainingHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingHistoryView.swift; sourceTree = "<group>"; };
+		A20000000000000000000032 /* BenchmarkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchmarkService.swift; sourceTree = "<group>"; };
+		A20000000000000000000033 /* BenchmarkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchmarkView.swift; sourceTree = "<group>"; };
+		A20000000000000000000034 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		A20000000000000000000035 /* MenuBarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarManager.swift; sourceTree = "<group>"; };
+		A20000000000000000000036 /* QuantizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuantizationService.swift; sourceTree = "<group>"; };
 		A30000000000000000000001 /* NeuralForge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NeuralForge.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -93,6 +135,18 @@
 				A20000000000000000000006 /* TrainingConfigView.swift */,
 				A20000000000000000000007 /* DataImportView.swift */,
 				A20000000000000000000008 /* ExportView.swift */,
+				A20000000000000000000016 /* GenerateView.swift */,
+				A20000000000000000000017 /* IngestView.swift */,
+				A20000000000000000000018 /* ModelCardView.swift */,
+				A20000000000000000000020 /* AssistantView.swift */,
+				A20000000000000000000022 /* AuditDashboardView.swift */,
+				A20000000000000000000024 /* ComplianceReportView.swift */,
+				A20000000000000000000026 /* SyncDashboardView.swift */,
+				A20000000000000000000028 /* ComputeClusterView.swift */,
+				A20000000000000000000029 /* SettingsView.swift */,
+				A20000000000000000000031 /* TrainingHistoryView.swift */,
+				A20000000000000000000033 /* BenchmarkView.swift */,
+				A20000000000000000000034 /* OnboardingView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -103,6 +157,15 @@
 				A20000000000000000000011 /* CLIRunner.swift */,
 				A20000000000000000000012 /* ProjectManager.swift */,
 				A20000000000000000000014 /* DocumentImporter.swift */,
+				A20000000000000000000019 /* NFIntelligence.swift */,
+				A20000000000000000000021 /* AuditLogReader.swift */,
+				A20000000000000000000023 /* ComplianceReportGenerator.swift */,
+				A20000000000000000000025 /* SyncService.swift */,
+				A20000000000000000000027 /* ComputeClusterService.swift */,
+				A20000000000000000000030 /* TrainingHistoryService.swift */,
+				A20000000000000000000032 /* BenchmarkService.swift */,
+				A20000000000000000000035 /* MenuBarManager.swift */,
+				A20000000000000000000036 /* QuantizationService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -192,6 +255,27 @@
 				A10000000000000000000011 /* CLIRunner.swift in Sources */,
 				A10000000000000000000012 /* ProjectManager.swift in Sources */,
 				A10000000000000000000014 /* DocumentImporter.swift in Sources */,
+				A10000000000000000000015 /* GenerateView.swift in Sources */,
+				A10000000000000000000017 /* IngestView.swift in Sources */,
+				A10000000000000000000018 /* ModelCardView.swift in Sources */,
+				A10000000000000000000019 /* NFIntelligence.swift in Sources */,
+				A10000000000000000000020 /* AssistantView.swift in Sources */,
+				A10000000000000000000021 /* AuditLogReader.swift in Sources */,
+				A10000000000000000000022 /* AuditDashboardView.swift in Sources */,
+				A10000000000000000000023 /* ComplianceReportGenerator.swift in Sources */,
+				A10000000000000000000024 /* ComplianceReportView.swift in Sources */,
+				A10000000000000000000025 /* SyncService.swift in Sources */,
+				A10000000000000000000026 /* SyncDashboardView.swift in Sources */,
+				A10000000000000000000027 /* ComputeClusterService.swift in Sources */,
+				A10000000000000000000028 /* ComputeClusterView.swift in Sources */,
+				A10000000000000000000029 /* SettingsView.swift in Sources */,
+				A10000000000000000000030 /* TrainingHistoryService.swift in Sources */,
+				A10000000000000000000031 /* TrainingHistoryView.swift in Sources */,
+				A10000000000000000000032 /* BenchmarkService.swift in Sources */,
+				A10000000000000000000033 /* BenchmarkView.swift in Sources */,
+				A10000000000000000000034 /* OnboardingView.swift in Sources */,
+				A10000000000000000000035 /* MenuBarManager.swift in Sources */,
+				A10000000000000000000036 /* QuantizationService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

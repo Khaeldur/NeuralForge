@@ -163,10 +163,10 @@ Stopping training sends SIGINT → the CLI catches it, saves a checkpoint, and e
 ## Running Tests
 
 ```bash
-# CLI tests (43 tests: config, JSON protocol, tokenizer, format, security, stability)
+# CLI tests (109 tests)
 cd cli && make test
 
-# Swift tests (32 tests: JSON parsing, project model, optimizer config, security, stability)
+# Swift tests (119 tests)
 cd app/Tests && swiftc -o test_swift -framework Foundation NeuralForgeTests.swift && ./test_swift
 ```
 
@@ -201,6 +201,17 @@ Default model: Stories 110M (LLaMA architecture)
 - **Sequence Length**: 256
 - **Vocabulary**: 32,000 (BPE)
 - **Parameters**: ~110M
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/ARCHITECTURE.md) | Technical architecture, data flow, ANE pipeline |
+| [Development](docs/DEVELOPMENT.md) | Build, test, debug, and contribute |
+| [Roadmap](docs/ROADMAP.md) | Feature status tracker and version history |
+| [Project Vision](docs/PROJECT_VISION.md) | Enterprise vision, gap analysis, competitive position |
+| [Data Ingestion Plan](docs/cron_job_data_ingestion_plan.md) | Automated data pipeline via launchd |
+| [LLM Integration Plan](docs/llm_agent_integration_plan.md) | Claude API assistant integration |
 
 ## License
 

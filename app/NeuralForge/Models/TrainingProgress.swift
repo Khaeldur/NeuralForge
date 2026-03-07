@@ -13,6 +13,9 @@ enum CLIMessage: Decodable {
     case done(DoneMsg)
     case error(ErrorMsg)
     case info(InfoMsg)
+    case val(ValMsg)
+    case token(TokenMsg)
+    case generateDone(GenerateDoneMsg)
 
     struct InitMsg: Decodable {
         let params, layers, dim, hidden, heads, seq, vocab: Int
@@ -56,6 +59,19 @@ enum CLIMessage: Decodable {
         let key: String
         let value: AnyCodable
     }
+    struct ValMsg: Decodable {
+        let step: Int
+        let val_loss: Double
+        let val_batches: Int
+    }
+    struct TokenMsg: Decodable {
+        let token_id: Int
+        let text: String
+    }
+    struct GenerateDoneMsg: Decodable {
+        let tokens: Int
+        let total_ms: Double
+    }
 
     private enum CodingKeys: String, CodingKey { case type }
 
@@ -72,6 +88,9 @@ enum CLIMessage: Decodable {
         case "done":       self = .done(try sc.decode(DoneMsg.self))
         case "error":      self = .error(try sc.decode(ErrorMsg.self))
         case "info":       self = .info(try sc.decode(InfoMsg.self))
+        case "val":           self = .val(try sc.decode(ValMsg.self))
+        case "token":         self = .token(try sc.decode(TokenMsg.self))
+        case "generate_done": self = .generateDone(try sc.decode(GenerateDoneMsg.self))
         default: throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "Unknown type: \(type)")
         }
     }
@@ -113,9 +132,19 @@ class TrainingState: ObservableObject {
     @Published var compileCount: Int = 0
     @Published var restartCount: Int = 0
     @Published var lossHistory: [(step: Int, loss: Double)] = []
+    @Published var emaLossHistory: [(step: Int, loss: Double)] = []
+    @Published var valLossHistory: [(step: Int, loss: Double)] = []
+    @Published var tflopsHistory: [(step: Int, tflops: Double)] = []
     @Published var errorMessage: String?
+    private var emaLoss: Double = 0
     @Published var lastCheckpoint: String?
     @Published var totalTimeSeconds: Double = 0
+    @Published var compileStartTime: Date?
+
+    var compileElapsed: TimeInterval {
+        guard let start = compileStartTime else { return 0 }
+        return Date().timeIntervalSince(start)
+    }
 
     // Model info
     @Published var modelParams: Int = 0
@@ -144,8 +173,10 @@ class TrainingState: ObservableObject {
             modelDim = m.dim
             modelVocab = m.vocab
             phase = .compiling
+            compileStartTime = Date()
         case .step(let m):
             phase = .training
+            compileStartTime = nil
             currentStep = m.step
             totalSteps = m.total
             currentLoss = m.loss
@@ -155,9 +186,17 @@ class TrainingState: ObservableObject {
             tflopsTotal = m.tflops_total
             if m.loss < bestLoss { bestLoss = m.loss }
             lossHistory.append((step: m.step, loss: m.loss))
+            // EMA smoothing (alpha=0.98)
+            if emaLoss == 0 { emaLoss = m.loss }
+            else { emaLoss = 0.98 * emaLoss + 0.02 * m.loss }
+            emaLossHistory.append((step: m.step, loss: emaLoss))
+            // TFLOPS tracking
+            tflopsHistory.append((step: m.step, tflops: m.tflops_ane))
             // Keep history manageable
-            if lossHistory.count > 2000 {
-                lossHistory = Array(lossHistory.suffix(1500))
+            if lossHistory.count > 5000 {
+                lossHistory = Array(lossHistory.suffix(3000))
+                emaLossHistory = Array(emaLossHistory.suffix(3000))
+                tflopsHistory = Array(tflopsHistory.suffix(3000))
             }
         case .batch(let m):
             compileCount = m.compiles
@@ -168,6 +207,7 @@ class TrainingState: ObservableObject {
             restartCount += 1
             compileCount = m.compiles
             phase = .compiling
+            compileStartTime = Date()
         case .done(let m):
             phase = .done
             currentLoss = m.final_loss
@@ -177,8 +217,15 @@ class TrainingState: ObservableObject {
         case .error(let m):
             phase = .error
             errorMessage = m.message
+        case .val(let m):
+            valLossHistory.append((step: m.step, loss: m.val_loss))
+            if valLossHistory.count > 2000 {
+                valLossHistory = Array(valLossHistory.suffix(1500))
+            }
         case .info:
             break
+        case .token, .generateDone:
+            break  // Handled by GenerateView via CLIRunner streaming
         }
     }
 
@@ -188,7 +235,8 @@ class TrainingState: ObservableObject {
         currentLoss = 0; bestLoss = .infinity
         msPerStep = 0; tflopsANE = 0; tflopsTotal = 0
         compileCount = 0; restartCount = 0
-        lossHistory = []; errorMessage = nil
-        lastCheckpoint = nil; totalTimeSeconds = 0
+        lossHistory = []; emaLossHistory = []; valLossHistory = []
+        tflopsHistory = []; emaLoss = 0; errorMessage = nil
+        lastCheckpoint = nil; totalTimeSeconds = 0; compileStartTime = nil
     }
 }

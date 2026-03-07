@@ -147,6 +147,34 @@ class CLIRunner: ObservableObject {
         args += ["--eps", String(format: "%.0e", cfg.eps)]
         args += ["--grad-clip", String(cfg.gradClipNorm)]
 
+        // LR Scheduler
+        if cfg.warmupSteps > 0 {
+            args += ["--warmup", "\(cfg.warmupSteps)"]
+        }
+        if cfg.lrSchedule != "none" {
+            args += ["--lr-schedule", cfg.lrSchedule]
+            args += ["--lr-min", String(format: "%.2e", cfg.lrMin)]
+        }
+
+        // Data Pipeline
+        if !cfg.valDataPath.isEmpty {
+            args += ["--val-data", cfg.valDataPath]
+        }
+        if cfg.valEvery > 0 {
+            args += ["--val-every", "\(cfg.valEvery)"]
+            args += ["--val-batches", "\(cfg.valBatches)"]
+        }
+        if cfg.shuffle {
+            args += ["--shuffle"]
+        }
+
+        // LoRA
+        if cfg.loraRank > 0 {
+            args += ["--lora-rank", "\(cfg.loraRank)"]
+            args += ["--lora-alpha", String(format: "%.1f", cfg.loraAlpha)]
+            args += ["--lora-targets", "\(cfg.loraTargets)"]
+        }
+
         let ckptDir = project.directory.appendingPathComponent("checkpoints")
         try? FileManager.default.createDirectory(at: ckptDir, withIntermediateDirectories: true)
         let ckptPath = ckptDir.appendingPathComponent("checkpoint.bin").path
@@ -287,6 +315,39 @@ class CLIRunner: ObservableObject {
         })
     }
 
+    // MARK: – Evaluate Perplexity
+
+    func evaluatePerplexity(checkpointPath: String, evalDataPath: String,
+                            onBatch: @escaping (Int, Double, Int) -> Void,
+                            onComplete: @escaping (Bool, Double?, Double?, Int?) -> Void) {
+        var avgLoss: Double?
+        var perplexity: Double?
+        var totalTokens: Int?
+
+        runCLI(args: ["benchmark", "--model", checkpointPath,
+                      "--data", evalDataPath, "--eval-perplexity"],
+               onLine: { line in
+            if let data = line.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let type = json["type"] as? String {
+                if type == "eval_batch",
+                   let batch = json["batch"] as? Int,
+                   let loss = json["loss"] as? Double,
+                   let tokens = json["tokens"] as? Int {
+                    Task { @MainActor in
+                        onBatch(batch, loss, tokens)
+                    }
+                } else if type == "eval_done" {
+                    avgLoss = json["avg_loss"] as? Double
+                    perplexity = json["perplexity"] as? Double
+                    totalTokens = json["total_tokens"] as? Int
+                }
+            }
+        }, onComplete: { status in
+            onComplete(status == 0, avgLoss, perplexity, totalTokens)
+        })
+    }
+
     // MARK: – CoreML Export (via Python converter)
 
     /// Find the converters/ directory relative to the CLI binary
@@ -354,6 +415,131 @@ class CLIRunner: ObservableObject {
                 }
             }
         }
+    }
+
+    // MARK: – Generate
+
+    func generate(modelPath: String, tokenizerPath: String, prompt: String,
+                  temperature: Double = 0.8, topP: Double = 0.9,
+                  maxTokens: Int = 256, seed: Int = 42,
+                  onToken: @escaping (String) -> Void,
+                  onComplete: @escaping (Bool, Int?, Double?) -> Void) {
+        var totalTokens: Int?
+        var totalMs: Double?
+
+        runCLI(args: ["generate",
+                      "--model", modelPath,
+                      "--tokenizer", tokenizerPath,
+                      "--prompt", prompt,
+                      "--temperature", String(format: "%.2f", temperature),
+                      "--top-p", String(format: "%.2f", topP),
+                      "--max-tokens", "\(maxTokens)",
+                      "--seed", "\(seed)"],
+               onLine: { line in
+            if let data = line.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let type = json["type"] as? String {
+                if type == "token", let text = json["text"] as? String {
+                    Task { @MainActor in
+                        onToken(text)
+                    }
+                } else if type == "generate_done" {
+                    totalTokens = json["tokens"] as? Int
+                    totalMs = json["total_ms"] as? Double
+                }
+            }
+        }, onComplete: { status in
+            onComplete(status == 0, totalTokens, totalMs)
+        })
+    }
+
+    // MARK: – Ingest
+
+    func ingest(sourcePath: String, outputPath: String, tokenizerPath: String,
+                maxShardMB: Int = 50, incremental: Bool = true,
+                onFile: @escaping (String, Int) -> Void,
+                onComplete: @escaping (Bool, Int, Int, Int) -> Void) {
+        var newFiles = 0, totalTokens = 0, shards = 0
+
+        var args = ["ingest",
+                    "--source", sourcePath,
+                    "--output", outputPath,
+                    "--tokenizer", tokenizerPath,
+                    "--max-shard-mb", "\(maxShardMB)"]
+        if incremental { args += ["--incremental"] }
+
+        runCLI(args: args, onLine: { line in
+            if let data = line.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let type = json["type"] as? String {
+                if type == "ingest_file",
+                   let file = json["file"] as? String,
+                   let tokens = json["tokens"] as? Int {
+                    Task { @MainActor in
+                        onFile(file, tokens)
+                    }
+                } else if type == "ingest_done" {
+                    newFiles = json["new_files"] as? Int ?? 0
+                    totalTokens = json["total_tokens"] as? Int ?? 0
+                    shards = json["shards"] as? Int ?? 0
+                }
+            }
+        }, onComplete: { status in
+            onComplete(status == 0, newFiles, totalTokens, shards)
+        })
+    }
+
+    // MARK: – Models
+
+    func listModels(onModel: @escaping ([String: Any]) -> Void,
+                    onComplete: @escaping () -> Void) {
+        runCLI(args: ["models", "--json"], onLine: { line in
+            if let data = line.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let type = json["type"] as? String,
+               type == "model_info" {
+                Task { @MainActor in
+                    onModel(json)
+                }
+            }
+        }, onComplete: { _ in
+            onComplete()
+        })
+    }
+
+    // MARK: – Download
+
+    func downloadModel(modelName: String, outputPath: String, hfToken: String? = nil,
+                       onProgress: @escaping (String, Int) -> Void,
+                       onComplete: @escaping (Bool, String?, String?) -> Void) {
+        var modelPath: String? = nil
+        var tokenizerPath: String? = nil
+        var success = false
+
+        var args = ["download", "--model", modelName, "--output", outputPath]
+        if let token = hfToken, !token.isEmpty {
+            args += ["--token", token]
+        }
+
+        runCLI(args: args, onLine: { line in
+            if let data = line.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let type = json["type"] as? String {
+                if type == "download_progress",
+                   let status = json["status"] as? String,
+                   let percent = json["percent"] as? Int {
+                    Task { @MainActor in
+                        onProgress(status, percent)
+                    }
+                } else if type == "download_done" {
+                    success = json["success"] as? Bool ?? false
+                    modelPath = json["model_path"] as? String
+                    tokenizerPath = json["tokenizer_path"] as? String
+                }
+            }
+        }, onComplete: { _ in
+            onComplete(success, modelPath, tokenizerPath)
+        })
     }
 
     // MARK: – Info

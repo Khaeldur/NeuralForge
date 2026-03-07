@@ -2,16 +2,16 @@
 CC = xcrun clang
 CFLAGS = -O2 -Wall -DACCELERATE_NEW_LAPACK -fobjc-arc -Wno-deprecated-declarations
 VENDOR = ../vendor/ANE/training
-FRAMEWORKS = -framework Foundation -framework CoreML -framework IOSurface -framework Accelerate
+FRAMEWORKS = -framework Foundation -framework CoreML -framework IOSurface -framework Accelerate -framework Quartz
 LDFLAGS = $(FRAMEWORKS) -ldl -lobjc
 
-neuralforge: main.m config.h progress.h tokenizer.h \
+neuralforge: main.m config.h progress.h tokenizer.h audit.h ingest.h models.h \
              $(VENDOR)/stories_config.h $(VENDOR)/stories_io.h \
              $(VENDOR)/stories_mil.h $(VENDOR)/stories_cpu_ops.h \
              $(VENDOR)/ane_rmsnorm_bwd.h $(VENDOR)/ane_classifier.h
 	$(CC) $(CFLAGS) -I$(VENDOR) -o $@ main.m $(LDFLAGS)
 
-test_cli: test_cli.m config.h progress.h tokenizer.h $(VENDOR)/stories_config.h
+test_cli: test_cli.m config.h progress.h tokenizer.h audit.h ingest.h models.h $(VENDOR)/stories_config.h
 	$(CC) -O0 -g -Wall -DACCELERATE_NEW_LAPACK -fobjc-arc -Wno-deprecated-declarations \
 		-I$(VENDOR) -DNEURALFORGE_TEST -o $@ test_cli.m $(LDFLAGS)
 

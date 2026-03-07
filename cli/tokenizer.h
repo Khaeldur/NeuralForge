@@ -72,56 +72,182 @@ static int nf_tokenizer_lookup(NFTokenizer *t, const char *str) {
     return -1;
 }
 
-// Encode a string into token IDs using BPE
-// Returns number of tokens written to output
+// --- Priority queue (max-heap) for fast BPE merging ---
+
+typedef struct {
+    float score;
+    int pos;         // index of left token in node array
+    uint16_t left_id;  // expected left token (staleness check)
+    uint16_t right_id; // expected right token (staleness check)
+} NFMerge;
+
+typedef struct {
+    uint16_t token_id;
+    int prev;  // -1 = head
+    int next;  // -1 = tail, -2 = deleted
+} NFTokNode;
+
+static void nf_heap_push(NFMerge *heap, int *size, NFMerge m) {
+    int i = (*size)++;
+    heap[i] = m;
+    while (i > 0) {
+        int parent = (i - 1) / 2;
+        if (heap[parent].score >= heap[i].score) break;
+        NFMerge tmp = heap[parent];
+        heap[parent] = heap[i];
+        heap[i] = tmp;
+        i = parent;
+    }
+}
+
+static NFMerge nf_heap_pop(NFMerge *heap, int *size) {
+    NFMerge top = heap[0];
+    heap[0] = heap[--(*size)];
+    int i = 0;
+    for (;;) {
+        int best = i, left = 2*i+1, right = 2*i+2;
+        if (left < *size && heap[left].score > heap[best].score) best = left;
+        if (right < *size && heap[right].score > heap[best].score) best = right;
+        if (best == i) break;
+        NFMerge tmp = heap[i];
+        heap[i] = heap[best];
+        heap[best] = tmp;
+        i = best;
+    }
+    return top;
+}
+
+// Try to add a merge candidate for adjacent nodes at positions left, right
+static void nf_try_add_merge(NFTokenizer *t, NFTokNode *nodes, NFMerge *heap,
+                             int *heap_size, int heap_cap, char *buf, int left, int right) {
+    if (left < 0 || right < 0) return;
+    snprintf(buf, t->max_token_length * 2 + 1, "%s%s",
+             t->vocab[nodes[left].token_id], t->vocab[nodes[right].token_id]);
+    int merge_id = nf_tokenizer_lookup(t, buf);
+    if (merge_id >= 0 && *heap_size < heap_cap) {
+        NFMerge m = { t->scores[merge_id], left, nodes[left].token_id, nodes[right].token_id };
+        nf_heap_push(heap, heap_size, m);
+    }
+}
+
+// Encode a string into token IDs using BPE with priority queue
+// O(n log n) instead of O(n^2) — handles megabyte-scale inputs
 static int nf_tokenizer_encode(NFTokenizer *t, const char *text, uint16_t *output, int max_tokens) {
     if (!text || !*text) return 0;
 
-    // Start with character-level tokens
-    int n_tokens = 0;
+    int text_len = (int)strlen(text);
+
+    // Phase 1: Character-level tokenization into doubly-linked list
+    NFTokNode *nodes = (NFTokNode *)malloc(text_len * sizeof(NFTokNode));
+    if (!nodes) return 0;
+
+    int n_nodes = 0;
     const char *p = text;
-    while (*p && n_tokens < max_tokens) {
-        // Try to find this single character as a token
+    while (*p && n_nodes < text_len) {
         char single[2] = { *p, '\0' };
         int id = nf_tokenizer_lookup(t, single);
         if (id >= 0) {
-            output[n_tokens++] = (uint16_t)id;
+            nodes[n_nodes].token_id = (uint16_t)id;
+            nodes[n_nodes].prev = n_nodes - 1;
+            nodes[n_nodes].next = n_nodes + 1;
+            n_nodes++;
         }
-        // Skip unknown bytes (shouldn't happen with llama2 vocab but be safe)
         p++;
     }
+    if (n_nodes == 0) { free(nodes); return 0; }
+    nodes[0].prev = -1;
+    nodes[n_nodes - 1].next = -1;
 
-    // BPE merge loop — iteratively merge the highest-scoring pair
-    char *merge_buf = (char *)malloc(t->max_token_length * 2 + 1);
-    if (!merge_buf) return n_tokens;
-    while (n_tokens > 1) {
-        float best_score = -1e30f;
-        int best_idx = -1, best_id = -1;
-
-        for (int i = 0; i < n_tokens - 1; i++) {
-            snprintf(merge_buf, t->max_token_length * 2 + 1, "%s%s",
-                     t->vocab[output[i]], t->vocab[output[i + 1]]);
-            int id = nf_tokenizer_lookup(t, merge_buf);
-            if (id >= 0 && t->scores[id] > best_score) {
-                best_score = t->scores[id];
-                best_idx = i;
-                best_id = id;
-            }
-        }
-
-        if (best_idx < 0) break;  // No more merges possible
-
-        // Merge: replace pair at best_idx with merged token
-        output[best_idx] = (uint16_t)best_id;
-        // Shift remaining tokens left
-        for (int i = best_idx + 1; i < n_tokens - 1; i++) {
-            output[i] = output[i + 1];
-        }
-        n_tokens--;
+    // Phase 2: Build initial merge heap from all adjacent pairs
+    int heap_cap = (n_nodes < 4) ? 16 : n_nodes * 3;
+    NFMerge *heap = (NFMerge *)malloc(heap_cap * sizeof(NFMerge));
+    if (!heap) {
+        // Fallback: just return character tokens
+        int n = (n_nodes < max_tokens) ? n_nodes : max_tokens;
+        for (int i = 0; i < n; i++) output[i] = nodes[i].token_id;
+        free(nodes);
+        return n;
     }
-    free(merge_buf);
+    int heap_size = 0;
 
-    return n_tokens;
+    char *merge_buf = (char *)malloc(t->max_token_length * 2 + 1);
+    if (!merge_buf) { free(nodes); free(heap); return 0; }
+
+    for (int i = 0; i < n_nodes - 1; i++) {
+        nf_try_add_merge(t, nodes, heap, &heap_size, heap_cap, merge_buf, i, i + 1);
+    }
+
+    // Phase 3: Greedily apply best merges via heap
+    int active = n_nodes;
+    while (heap_size > 0 && active > 1) {
+        NFMerge best = nf_heap_pop(heap, &heap_size);
+        int pos = best.pos;
+
+        // Staleness check: skip if tokens changed since this merge was enqueued
+        if (nodes[pos].next == -2) continue;        // left node was deleted
+        if (nodes[pos].token_id != best.left_id) continue;  // left token changed
+        if (nodes[pos].next < 0) continue;           // no right neighbor
+        int rpos = nodes[pos].next;
+        if (nodes[rpos].token_id != best.right_id) continue; // right token changed
+
+        // Verify merge is still valid (redundant but safe)
+        snprintf(merge_buf, t->max_token_length * 2 + 1, "%s%s",
+                 t->vocab[nodes[pos].token_id], t->vocab[nodes[rpos].token_id]);
+        int merge_id = nf_tokenizer_lookup(t, merge_buf);
+        if (merge_id < 0) continue;
+
+        // Apply merge: update left node, unlink right node
+        nodes[pos].token_id = (uint16_t)merge_id;
+        nodes[pos].next = nodes[rpos].next;
+        if (nodes[rpos].next >= 0) {
+            nodes[nodes[rpos].next].prev = pos;
+        }
+        nodes[rpos].next = -2;  // mark deleted
+        nodes[rpos].prev = -2;
+        active--;
+
+        // Grow heap if needed before adding new candidates
+        if (heap_size + 2 >= heap_cap) {
+            heap_cap *= 2;
+            NFMerge *new_heap = (NFMerge *)realloc(heap, heap_cap * sizeof(NFMerge));
+            if (!new_heap) break;  // out of memory, stop merging
+            heap = new_heap;
+        }
+
+        // Add new merge candidates for the updated neighbors
+        if (nodes[pos].prev >= 0) {
+            nf_try_add_merge(t, nodes, heap, &heap_size, heap_cap, merge_buf,
+                             nodes[pos].prev, pos);
+        }
+        if (nodes[pos].next >= 0) {
+            nf_try_add_merge(t, nodes, heap, &heap_size, heap_cap, merge_buf,
+                             pos, nodes[pos].next);
+        }
+    }
+
+    // Phase 4: Collect results by walking the linked list from head
+    int n_output = 0;
+    int cur = 0;
+    // Find head (first node with prev == -1)
+    for (int i = 0; i < n_nodes; i++) {
+        if (nodes[i].prev == -1 && nodes[i].next != -2) { cur = i; break; }
+    }
+    while (cur >= 0 && n_output < max_tokens) {
+        output[n_output++] = nodes[cur].token_id;
+        cur = nodes[cur].next;
+    }
+
+    free(merge_buf);
+    free(heap);
+    free(nodes);
+    return n_output;
+}
+
+// Decode a single token ID back to its string
+// Returns NULL for out-of-range IDs
+static const char *nf_tokenizer_decode(NFTokenizer *t, int token_id) {
+    if (!t || token_id < 0 || token_id >= t->vocab_size) return NULL;
+    return t->vocab[token_id];
 }
 
 static void nf_tokenizer_free(NFTokenizer *t) {

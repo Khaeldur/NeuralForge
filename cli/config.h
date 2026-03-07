@@ -52,6 +52,22 @@ typedef struct {
     bool  resume;
     int   seed;
     bool  json_output;       // true = JSON to stdout (default for app)
+
+    // LR Scheduler
+    int   warmup_steps;      // linear warmup phase (default 0 = disabled)
+    float lr_min;            // minimum LR after decay (default 1e-5)
+    int   lr_schedule;       // 0=constant, 1=cosine
+
+    // Data Pipeline
+    char  val_data_path[PATH_MAX];  // validation data file (optional)
+    int   val_every;         // validate every N optimizer steps (default 0 = disabled)
+    int   val_batches;       // number of val batches to average (default 10)
+    bool  shuffle;           // shuffle data positions (default false)
+
+    // LoRA
+    int   lora_rank;         // 0 = disabled (full fine-tune), 4-64 typical
+    float lora_alpha;        // scaling factor (default 16)
+    int   lora_targets;      // bitmask: 1=wq, 2=wk, 4=wv, 8=wo (default 8 = wo only)
 } NFConfig;
 
 static NFConfig nf_config_defaults(void) {
@@ -73,6 +89,16 @@ static NFConfig nf_config_defaults(void) {
     cfg.resume = false;
     cfg.seed = 42;
     cfg.json_output = true;
+    cfg.warmup_steps = 0;
+    cfg.lr_min = 1e-5f;
+    cfg.lr_schedule = 0;
+    cfg.val_data_path[0] = '\0';
+    cfg.val_every = 0;
+    cfg.val_batches = 10;
+    cfg.shuffle = false;
+    cfg.lora_rank = 0;
+    cfg.lora_alpha = 16.0f;
+    cfg.lora_targets = 8;   // Wo only
     return cfg;
 }
 
@@ -142,6 +168,51 @@ static void nf_config_from_json(NFConfig *cfg, const char *path) {
         }
         if (json[@"use_ane_extras"])  cfg->use_ane_extras  = [json[@"use_ane_extras"] boolValue];
         if (json[@"resume"])          cfg->resume          = [json[@"resume"] boolValue];
+        // LR Scheduler
+        if (json[@"warmup_steps"]) {
+            int v = [json[@"warmup_steps"] intValue];
+            if (v >= 0 && v <= 10000000) cfg->warmup_steps = v;
+        }
+        if (json[@"lr_min"]) {
+            float v = [json[@"lr_min"] floatValue];
+            if (v >= 0.0f && v <= 10.0f && !isnan(v)) cfg->lr_min = v;
+        }
+        if (json[@"lr_schedule"]) {
+            NSString *sched = nil;
+            if ([json[@"lr_schedule"] isKindOfClass:[NSString class]])
+                sched = json[@"lr_schedule"];
+            else if ([json[@"lr_schedule"] isKindOfClass:[NSNumber class]])
+                cfg->lr_schedule = [json[@"lr_schedule"] intValue] == 1 ? 1 : 0;
+            if (sched) {
+                if ([sched isEqualToString:@"cosine"]) cfg->lr_schedule = 1;
+                else cfg->lr_schedule = 0;
+            }
+        }
+        // Data Pipeline
+        if (json[@"val_data"] && [json[@"val_data"] isKindOfClass:[NSString class]])
+            strlcpy(cfg->val_data_path, [json[@"val_data"] UTF8String], PATH_MAX);
+        if (json[@"val_every"]) {
+            int v = [json[@"val_every"] intValue];
+            if (v >= 0 && v <= 10000000) cfg->val_every = v;
+        }
+        if (json[@"val_batches"]) {
+            int v = [json[@"val_batches"] intValue];
+            if (v >= 1 && v <= 1000) cfg->val_batches = v;
+        }
+        if (json[@"shuffle"]) cfg->shuffle = [json[@"shuffle"] boolValue];
+        // LoRA
+        if (json[@"lora_rank"]) {
+            int v = [json[@"lora_rank"] intValue];
+            if (v >= 0 && v <= 256) cfg->lora_rank = v;
+        }
+        if (json[@"lora_alpha"]) {
+            float v = [json[@"lora_alpha"] floatValue];
+            if (v >= 0.0f && v <= 1000.0f && !isnan(v)) cfg->lora_alpha = v;
+        }
+        if (json[@"lora_targets"]) {
+            int v = [json[@"lora_targets"] intValue];
+            if (v >= 0 && v <= 15) cfg->lora_targets = v;
+        }
     }
 }
 
@@ -190,6 +261,29 @@ static NFConfig nf_config_from_args(int argc, char **argv) {
             cfg.use_ane_extras = false;
         else if (strcmp(argv[i], "--no-json") == 0)
             cfg.json_output = false;
+        else if (strcmp(argv[i], "--warmup") == 0 && i+1 < argc)
+            cfg.warmup_steps = nf_safe_atoi(argv[++i], 0, 0, 10000000);
+        else if (strcmp(argv[i], "--lr-min") == 0 && i+1 < argc)
+            cfg.lr_min = nf_safe_atof(argv[++i], 1e-5f, 0.0f, 10.0f);
+        else if (strcmp(argv[i], "--lr-schedule") == 0 && i+1 < argc) {
+            i++;
+            if (strcmp(argv[i], "cosine") == 0) cfg.lr_schedule = 1;
+            else cfg.lr_schedule = 0;  // "none" or anything else = constant
+        }
+        else if (strcmp(argv[i], "--val-data") == 0 && i+1 < argc)
+            strlcpy(cfg.val_data_path, argv[++i], PATH_MAX);
+        else if (strcmp(argv[i], "--val-every") == 0 && i+1 < argc)
+            cfg.val_every = nf_safe_atoi(argv[++i], 0, 0, 10000000);
+        else if (strcmp(argv[i], "--val-batches") == 0 && i+1 < argc)
+            cfg.val_batches = nf_safe_atoi(argv[++i], 10, 1, 1000);
+        else if (strcmp(argv[i], "--shuffle") == 0)
+            cfg.shuffle = true;
+        else if (strcmp(argv[i], "--lora-rank") == 0 && i+1 < argc)
+            cfg.lora_rank = nf_safe_atoi(argv[++i], 0, 0, 256);
+        else if (strcmp(argv[i], "--lora-alpha") == 0 && i+1 < argc)
+            cfg.lora_alpha = nf_safe_atof(argv[++i], 16.0f, 0.0f, 1000.0f);
+        else if (strcmp(argv[i], "--lora-targets") == 0 && i+1 < argc)
+            cfg.lora_targets = nf_safe_atoi(argv[++i], 8, 0, 15);
         else if (strcmp(argv[i], "--config") == 0 && i+1 < argc)
             i++;  // already handled in first pass
     }

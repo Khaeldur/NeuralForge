@@ -6,82 +6,37 @@ import SwiftUI
 struct NeuralForgeApp: App {
     @StateObject private var projectManager = ProjectManager()
     @StateObject private var cliRunner = CLIRunner()
+    @AppStorage("onboardingComplete") private var onboardingComplete = false
 
     var body: some Scene {
         WindowGroup {
-            MainView()
-                .environmentObject(projectManager)
-                .environmentObject(cliRunner)
+            if onboardingComplete {
+                MainView()
+                    .environmentObject(projectManager)
+                    .environmentObject(cliRunner)
+            } else {
+                OnboardingView(isComplete: $onboardingComplete)
+                    .environmentObject(projectManager)
+                    .environmentObject(cliRunner)
+            }
         }
-        .defaultSize(width: 1200, height: 800)
+        .defaultSize(width: onboardingComplete ? 1200 : 620, height: onboardingComplete ? 800 : 520)
 
         Settings {
             SettingsView()
                 .environmentObject(cliRunner)
         }
-    }
-}
 
-struct SettingsView: View {
-    @EnvironmentObject var cliRunner: CLIRunner
-    @State private var cliPath = ""
-
-    var body: some View {
-        Form {
-            Section("CLI Binary") {
-                HStack {
-                    if cliRunner.cliFound {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        Text("Found")
-                            .foregroundStyle(.green)
-                    } else {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.red)
-                        Text("Not Found")
-                            .foregroundStyle(.red)
-                    }
-                    Spacer()
-                }
-
-                TextField("Path to neuralforge binary", text: $cliPath)
-                    .onAppear { cliPath = cliRunner.cliBinaryPath }
-                    .onSubmit {
-                        cliRunner.setCLIPath(cliPath)
-                    }
-
-                HStack {
-                    Button("Browse...") {
-                        let panel = NSOpenPanel()
-                        panel.canChooseFiles = true
-                        panel.canChooseDirectories = false
-                        panel.allowsMultipleSelection = false
-                        if panel.runModal() == .OK, let url = panel.url {
-                            cliPath = url.path
-                            cliRunner.setCLIPath(cliPath)
-                        }
-                    }
-                    Spacer()
-                    Text(cliRunner.cliBinaryPath)
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-            }
-
-            Section("Build Instructions") {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("To build the CLI from source:")
-                        .font(.subheadline.bold())
-                    Text("cd NeuralForge/cli && make")
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
+        MenuBarExtra {
+            MenuBarView(cliRunner: cliRunner)
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: MenuBarManager.shared.statusIcon)
+                if !MenuBarManager.shared.menuBarTitle.isEmpty {
+                    Text(MenuBarManager.shared.menuBarTitle)
                 }
             }
         }
-        .padding()
-        .frame(width: 500)
+        .menuBarExtraStyle(.window)
     }
 }
