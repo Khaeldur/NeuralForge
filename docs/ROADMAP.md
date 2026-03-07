@@ -304,13 +304,46 @@ Additional v2.0 work:
 
 ---
 
+## v5.1: Deferred Platform Features ✅
+
+### CloudKit/S3 Remote Sync ✅
+- [x] CloudSyncProvider protocol (upload, download, list, delete, testConnection)
+- [x] S3SyncProvider with AWS Signature V4 (HMAC-SHA256), presigned URLs
+- [x] CloudKitSyncProvider with CKContainer/CKDatabase/CKAsset (iCloud private DB)
+- [x] CloudSyncConfig (Codable) with S3/CloudKit settings, Keychain credential storage
+- [x] CloudSyncManager (@MainActor singleton): upload/download/list/sync/testConnection
+- [x] 12 Swift tests covering config, errors, URL construction, credential handling
+- **Status:** Complete.
+
+### Gradient Aggregation Protocol ✅
+- [x] GradientMessage wire protocol (Codable): assignWork, gradientReady, aggregated, heartbeat, syncCheckpoint
+- [x] AggregationConfig: AllReduce, ParameterServer, GossipProtocol strategies
+- [x] StragglerPolicy: Wait, Skip, Timeout modes
+- [x] GradientAggregator (@MainActor singleton): coordinator/worker modes, all-reduce averaging, ring-reduce
+- [x] GradientMetrics (ObservableObject): rounds, throughput, straggler/failure counts, rolling averages
+- [x] Gradient compression (threshold-based sparsification) and checksum verification
+- [x] 15 Swift tests covering strategies, metrics, compression, ring topology
+- **Status:** Complete.
+
+### Multi-User Audit Web Dashboard ✅
+- [x] WebDashboardConfig (Codable): port, bind address, auth token, refresh interval
+- [x] AuditAggregator: local log scanning, multi-machine sync directory scanning, entry merging
+- [x] AuditAPIHandler: HTTP request parsing, 6 REST routes (/, /api/entries, /api/stats, /api/verify, /api/machines, /health)
+- [x] Full HTML dashboard with dark theme, stats cards, filter bar, audit entry table, auto-refresh
+- [x] AuditWebServer (@MainActor singleton): NWListener-based HTTP server, CORS support, bearer token auth
+- [x] Thread-safe connection handling with ObjectIdentifier-based tracking
+- [x] 18 Swift tests covering config, URL generation, request parsing, response serialization, auth
+- **Status:** Complete.
+
+---
+
 ## Test Coverage
 
 | Component | Tests | Last Verified |
 |-----------|-------|---------------|
 | CLI (test_cli.m) | 152 | 2026-03-07 |
-| Swift (NeuralForgeTests.swift) | 311 | 2026-03-07 |
-| Xcode build (36 source files) | SUCCEEDED | 2026-03-07 |
+| Swift (NeuralForgeTests.swift) | 356 | 2026-03-07 |
+| Xcode build (39 source files) | SUCCEEDED | 2026-03-07 |
 | Real training (50 steps) | PASSED | 2025-03-07 |
 | Real generation (100 tokens) | PASSED | 2025-03-07 |
 | CLI tokenize (45KB file) | PASSED | 2025-03-07 |

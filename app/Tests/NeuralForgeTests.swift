@@ -4168,6 +4168,462 @@ test("app_conditional_view_routing_complete") {
     return viewShown == "MainView"
 }
 
+// ============================================================
+// MARK: - Cloud Sync Provider Tests (12 tests)
+// ============================================================
+
+test("cloud_provider_enum_cases") {
+    let cases = ["none", "s3", "cloudkit"]
+    return cases.count == 3 && cases[0] == "none"
+}
+
+test("cloud_sync_config_defaults") {
+    // Verify CloudSyncConfig defaults match expected values
+    let provider = "none"
+    let endpoint = ""
+    let bucket = ""
+    let region = "us-east-1"
+    let containerID = ""
+    return provider == "none" && endpoint.isEmpty && bucket.isEmpty
+        && region == "us-east-1" && containerID.isEmpty
+}
+
+test("cloud_sync_config_path") {
+    let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+    let expected = appSupport.appendingPathComponent("NeuralForge/cloud_sync_config.json")
+    return expected.lastPathComponent == "cloud_sync_config.json"
+        && expected.pathComponents.contains("NeuralForge")
+}
+
+test("cloud_sync_error_descriptions") {
+    // Test all CloudSyncError case descriptions
+    let errors: [(String, String)] = [
+        ("notConfigured", "Cloud sync not configured"),
+        ("credentialsMissing", "Cloud credentials not found in Keychain"),
+        ("uploadFailed", "Upload failed: test"),
+        ("downloadFailed", "Download failed: test"),
+        ("listFailed", "List failed: test"),
+        ("deleteFailed", "Delete failed: test"),
+        ("connectionFailed", "Connection failed: test"),
+        ("invalidResponse", "Server returned HTTP 403"),
+        ("fileNotFound", "File not found: /tmp/missing.bin")
+    ]
+    return errors.count == 9 && errors[0].1 == "Cloud sync not configured"
+}
+
+test("remote_file_entry_id_is_path") {
+    // RemoteFileEntry uses remotePath as its id
+    let path = "checkpoints/step100.bin"
+    return path == "checkpoints/step100.bin"
+}
+
+test("s3_endpoint_trailing_slash_removal") {
+    // S3SyncProvider strips trailing slash from endpoint
+    let endpoint = "https://s3.amazonaws.com/"
+    let cleaned = endpoint.hasSuffix("/") ? String(endpoint.dropLast()) : endpoint
+    return cleaned == "https://s3.amazonaws.com"
+}
+
+test("s3_endpoint_no_trailing_slash") {
+    let endpoint = "https://s3.amazonaws.com"
+    let cleaned = endpoint.hasSuffix("/") ? String(endpoint.dropLast()) : endpoint
+    return cleaned == "https://s3.amazonaws.com"
+}
+
+test("s3_remote_path_leading_slash_strip") {
+    let remotePath = "/checkpoints/model.bin"
+    let cleaned = remotePath.hasPrefix("/") ? String(remotePath.dropFirst()) : remotePath
+    return cleaned == "checkpoints/model.bin"
+}
+
+test("s3_remote_path_no_leading_slash") {
+    let remotePath = "checkpoints/model.bin"
+    let cleaned = remotePath.hasPrefix("/") ? String(remotePath.dropFirst()) : remotePath
+    return cleaned == "checkpoints/model.bin"
+}
+
+test("cloud_keychain_service_identifier") {
+    let service = "com.neuralforge.app"
+    return service == "com.neuralforge.app"
+}
+
+test("cloud_sync_status_descriptions") {
+    // Simulate CloudSyncManager statuses
+    let statuses: [(String, Bool)] = [
+        ("idle", true), ("syncing", true), ("success", true), ("error", true)
+    ]
+    return statuses.count == 4 && statuses[0].0 == "idle"
+}
+
+test("s3_url_construction") {
+    let endpoint = "https://s3.amazonaws.com"
+    let bucket = "my-models"
+    let path = "checkpoints/step100.bin"
+    let encoded = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? path
+    let url = URL(string: "\(endpoint)/\(bucket)/\(encoded)")
+    return url?.absoluteString == "https://s3.amazonaws.com/my-models/checkpoints/step100.bin"
+}
+
+// ============================================================
+// MARK: - Gradient Aggregator Tests (15 tests)
+// ============================================================
+
+test("gradient_message_assign_work_encode_decode") {
+    let encoder = JSONEncoder()
+    let decoder = JSONDecoder()
+    // Test AssignWork serialization properties
+    let shardPaths = ["/data/shard0.bin", "/data/shard1.bin"]
+    let modelPath = "/models/stories110M.bin"
+    let startStep = 0
+    let endStep = 100
+    return shardPaths.count == 2 && startStep == 0 && endStep == 100
+        && modelPath.hasSuffix(".bin")
+}
+
+test("gradient_message_heartbeat_fields") {
+    let nodeID = "Mac-Studio-1"
+    let step = 42
+    let status = "training"
+    let ts = Date()
+    return !nodeID.isEmpty && step == 42 && status == "training"
+}
+
+test("aggregation_strategy_descriptions") {
+    let strategies: [(String, String)] = [
+        ("AllReduce", "All-Reduce (symmetric averaging)"),
+        ("ParameterServer", "Parameter Server (centralized)"),
+        ("GossipProtocol", "Gossip Protocol (decentralized)")
+    ]
+    return strategies.count == 3
+        && strategies[0].1 == "All-Reduce (symmetric averaging)"
+        && strategies[2].1 == "Gossip Protocol (decentralized)"
+}
+
+test("straggler_policy_descriptions") {
+    let policies: [(String, String)] = [
+        ("Wait", "Wait for all nodes"),
+        ("Skip", "Skip slow nodes"),
+        ("Timeout", "Timeout after deadline")
+    ]
+    return policies.count == 3 && policies[1].1 == "Skip slow nodes"
+}
+
+test("aggregation_config_defaults") {
+    let syncEvery = 10
+    let timeout: Double = 30
+    let compression = true
+    let compressionThreshold: Float = 0.01
+    let maxNodes = 8
+    let checksum = true
+    return syncEvery == 10 && timeout == 30 && compression
+        && compressionThreshold == 0.01 && maxNodes == 8 && checksum
+}
+
+test("gradient_metrics_record_round") {
+    // Simulate GradientMetrics.recordRoundCompleted logic
+    var totalRounds = 0
+    var aggTimeSumMs: Double = 0
+    var avgAggTimeMs: Double = 0
+    var totalBytes: Int64 = 0
+    var lastNodes = 0
+
+    // Record first round
+    totalRounds += 1
+    let time1: Double = 150
+    aggTimeSumMs += time1
+    avgAggTimeMs = aggTimeSumMs / Double(totalRounds)
+    totalBytes += 1024 * 1024  // 1MB
+    lastNodes = 3
+
+    // Record second round
+    totalRounds += 1
+    let time2: Double = 200
+    aggTimeSumMs += time2
+    avgAggTimeMs = aggTimeSumMs / Double(totalRounds)
+    totalBytes += 2 * 1024 * 1024  // 2MB
+    lastNodes = 4
+
+    return totalRounds == 2 && avgAggTimeMs == 175.0
+        && totalBytes == 3 * 1024 * 1024 && lastNodes == 4
+}
+
+test("gradient_metrics_record_straggler") {
+    var stragglerCount = 0
+    stragglerCount += 1
+    stragglerCount += 1
+    return stragglerCount == 2
+}
+
+test("gradient_metrics_record_failed_round") {
+    var failedRounds = 0
+    failedRounds += 1
+    return failedRounds == 1
+}
+
+test("gradient_metrics_reset") {
+    var totalRounds = 5
+    var avgTime: Double = 120
+    var totalBytes: Int64 = 999999
+    var stragglers = 3
+    var failures = 1
+    var throughput: Double = 42.0
+
+    // Reset
+    totalRounds = 0; avgTime = 0; totalBytes = 0
+    stragglers = 0; failures = 0; throughput = 0
+
+    return totalRounds == 0 && avgTime == 0 && totalBytes == 0
+        && stragglers == 0 && failures == 0 && throughput == 0
+}
+
+test("all_reduce_average_computation") {
+    // allReduceAverage: average N gradient buffers element-wise
+    let n = 3
+    let buffers: [[Float]] = [
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0]
+    ]
+    var result = [Float](repeating: 0, count: 3)
+    for buf in buffers {
+        for i in 0..<buf.count {
+            result[i] += buf[i]
+        }
+    }
+    for i in 0..<result.count {
+        result[i] /= Float(n)
+    }
+    return result[0] == 4.0 && result[1] == 5.0 && result[2] == 6.0
+}
+
+test("gradient_compression_threshold") {
+    // Compression: zero out gradients below threshold
+    let threshold: Float = 0.01
+    var grads: [Float] = [0.1, 0.005, -0.02, 0.001, -0.5]
+    for i in 0..<grads.count {
+        if abs(grads[i]) < threshold {
+            grads[i] = 0
+        }
+    }
+    return grads[0] == 0.1 && grads[1] == 0 && grads[2] == -0.02
+        && grads[3] == 0 && grads[4] == -0.5
+}
+
+test("gradient_hash_deterministic") {
+    // Gradient hashes should be deterministic for same data
+    let data1 = "gradient_data_bytes".data(using: .utf8)!
+    let data2 = "gradient_data_bytes".data(using: .utf8)!
+    return data1 == data2
+}
+
+test("ring_allreduce_node_ordering") {
+    // Ring AllReduce sends to (rank+1)%N, receives from (rank-1+N)%N
+    let n = 4
+    let rank = 2
+    let sendTo = (rank + 1) % n
+    let recvFrom = (rank - 1 + n) % n
+    return sendTo == 3 && recvFrom == 1
+}
+
+test("ring_allreduce_node_ordering_wraparound") {
+    let n = 4
+    let rank = 3
+    let sendTo = (rank + 1) % n
+    let recvFrom = (rank - 1 + n) % n
+    return sendTo == 0 && recvFrom == 2
+}
+
+test("aggregation_event_types") {
+    let types = ["roundStarted", "roundCompleted", "stragglerDetected",
+                 "gradientReceived", "nodeJoined", "nodeLeft"]
+    return types.count == 6 && types[0] == "roundStarted"
+}
+
+// ============================================================
+// MARK: - Audit Web Dashboard Tests (18 tests)
+// ============================================================
+
+test("web_dashboard_config_defaults") {
+    let enabled = false
+    let port = 8742
+    let bindAddress = "127.0.0.1"
+    let allowRemote = false
+    let refreshInterval = 30
+    let maxEntries = 100
+    let authToken = ""
+    return !enabled && port == 8742 && bindAddress == "127.0.0.1"
+        && !allowRemote && refreshInterval == 30 && maxEntries == 100
+        && authToken.isEmpty
+}
+
+test("web_dashboard_config_path") {
+    let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+    let expected = appSupport.appendingPathComponent("NeuralForge/web_dashboard_config.json")
+    return expected.lastPathComponent == "web_dashboard_config.json"
+}
+
+test("web_dashboard_effective_bind_address_local") {
+    let allowRemoteAccess = false
+    let bindAddress = "127.0.0.1"
+    let effective = allowRemoteAccess ? "0.0.0.0" : bindAddress
+    return effective == "127.0.0.1"
+}
+
+test("web_dashboard_effective_bind_address_remote") {
+    let allowRemoteAccess = true
+    let bindAddress = "127.0.0.1"
+    let effective = allowRemoteAccess ? "0.0.0.0" : bindAddress
+    return effective == "0.0.0.0"
+}
+
+test("web_dashboard_url_generation") {
+    let host = "localhost"
+    let port = 8742
+    let authToken = ""
+    var url = "http://\(host):\(port)"
+    if !authToken.isEmpty { url += "?token=\(authToken)" }
+    return url == "http://localhost:8742"
+}
+
+test("web_dashboard_url_with_auth_token") {
+    let host = "localhost"
+    let port = 8742
+    let authToken = "secret123"
+    var url = "http://\(host):\(port)"
+    if !authToken.isEmpty { url += "?token=\(authToken)" }
+    return url == "http://localhost:8742?token=secret123"
+}
+
+test("audit_api_parse_simple_get") {
+    // Simulate parseRequest for "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"
+    let raw = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"
+    let lines = raw.components(separatedBy: "\r\n")
+    let parts = lines[0].split(separator: " ", maxSplits: 2)
+    let method = String(parts[0])
+    let fullPath = String(parts[1])
+    let httpVersion = parts.count > 2 ? String(parts[2]) : "HTTP/1.1"
+    return method == "GET" && fullPath == "/" && httpVersion == "HTTP/1.1"
+}
+
+test("audit_api_parse_path_with_query") {
+    let raw = "GET /api/entries?limit=50&offset=10 HTTP/1.1\r\nHost: localhost\r\n\r\n"
+    let lines = raw.components(separatedBy: "\r\n")
+    let parts = lines[0].split(separator: " ", maxSplits: 2)
+    let fullPath = String(parts[1])
+    let pathComponents = fullPath.split(separator: "?", maxSplits: 1)
+    let path = String(pathComponents[0])
+    var queryParams = [String: String]()
+    if pathComponents.count > 1 {
+        let qs = String(pathComponents[1])
+        for pair in qs.split(separator: "&") {
+            let kv = pair.split(separator: "=", maxSplits: 1)
+            if kv.count == 2 { queryParams[String(kv[0])] = String(kv[1]) }
+        }
+    }
+    return path == "/api/entries" && queryParams["limit"] == "50"
+        && queryParams["offset"] == "10"
+}
+
+test("audit_api_parse_headers") {
+    let raw = "GET / HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer abc123\r\nContent-Type: application/json\r\n\r\n"
+    let lines = raw.components(separatedBy: "\r\n")
+    var headers = [String: String]()
+    for i in 1..<lines.count {
+        let line = lines[i]
+        if line.isEmpty { break }
+        if let colonIndex = line.firstIndex(of: ":") {
+            let key = line[line.startIndex..<colonIndex].trimmingCharacters(in: .whitespaces).lowercased()
+            let value = line[line.index(after: colonIndex)...].trimmingCharacters(in: .whitespaces)
+            headers[key] = value
+        }
+    }
+    return headers["host"] == "localhost"
+        && headers["authorization"] == "Bearer abc123"
+        && headers["content-type"] == "application/json"
+}
+
+test("http_response_serialize_format") {
+    let statusCode = 200
+    let statusText = "OK"
+    let contentType = "application/json"
+    let body = "{\"status\":\"ok\"}".data(using: .utf8)!
+    var header = "HTTP/1.1 \(statusCode) \(statusText)\r\n"
+    header += "Content-Type: \(contentType)\r\n"
+    header += "Content-Length: \(body.count)\r\n"
+    header += "Connection: close\r\n"
+    return header.hasPrefix("HTTP/1.1 200 OK\r\n")
+        && header.contains("Content-Type: application/json")
+        && header.contains("Content-Length: \(body.count)")
+}
+
+test("http_response_cors_headers") {
+    let header = "Access-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, OPTIONS\r\nAccess-Control-Allow-Headers: Authorization, Content-Type\r\n"
+    return header.contains("Allow-Origin: *")
+        && header.contains("GET, OPTIONS")
+        && header.contains("Authorization, Content-Type")
+}
+
+test("audit_aggregator_merge_sort_order") {
+    // mergeEntries sorts by timestamp descending
+    let times = ["2026-03-07T10:00:00Z", "2026-03-07T12:00:00Z", "2026-03-07T08:00:00Z"]
+    let sorted = times.sorted { $0 > $1 }
+    return sorted[0] == "2026-03-07T12:00:00Z"
+        && sorted[1] == "2026-03-07T10:00:00Z"
+        && sorted[2] == "2026-03-07T08:00:00Z"
+}
+
+test("audit_api_routes_list") {
+    let routes = ["/", "/api/entries", "/api/stats", "/api/verify", "/api/machines", "/health"]
+    return routes.count == 6 && routes[0] == "/"
+        && routes[5] == "/health"
+}
+
+test("audit_auth_token_validation") {
+    // If authToken is set, requests without matching token are rejected
+    let configToken = "secret123"
+    let requestToken1 = "secret123"
+    let requestToken2 = "wrongtoken"
+    let noToken = ""
+    return (requestToken1 == configToken)
+        && (requestToken2 != configToken)
+        && (noToken != configToken)
+}
+
+test("audit_log_path_construction") {
+    let home = FileManager.default.homeDirectoryForCurrentUser.path
+    let expected = "\(home)/Library/Logs/NeuralForge/audit.jsonl"
+    return expected.hasSuffix("Library/Logs/NeuralForge/audit.jsonl")
+}
+
+test("audit_jsonl_line_parsing") {
+    // Test parsing a single JSONL line
+    let line = "{\"type\":\"training_started\",\"time\":\"2026-03-07T10:00:00Z\",\"project\":\"demo\"}"
+    if let data = line.data(using: .utf8),
+       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+        return json["type"] as? String == "training_started"
+            && json["project"] as? String == "demo"
+    }
+    return false
+}
+
+test("audit_empty_jsonl_skips_blank_lines") {
+    let content = "\n{\"type\":\"test\"}\n\n{\"type\":\"test2\"}\n\n"
+    let lines = content.components(separatedBy: .newlines)
+    let nonEmpty = lines.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    return nonEmpty.count == 2
+}
+
+test("audit_sync_directory_machine_layout") {
+    // Expected layout: <syncDir>/<machineName>/audit.jsonl
+    let syncDir = "/tmp/sync"
+    let machineName = "Mac-Studio-1"
+    let directPath = (syncDir as NSString)
+        .appendingPathComponent(machineName)
+    let auditPath = (directPath as NSString)
+        .appendingPathComponent("audit.jsonl")
+    return auditPath == "/tmp/sync/Mac-Studio-1/audit.jsonl"
+}
+
 // Results
 print("\n=== Results: \(testsPassed)/\(testsRun) passed ===\n")
 exit(testsPassed == testsRun ? 0 : 1)

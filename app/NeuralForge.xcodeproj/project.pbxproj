@@ -42,6 +42,9 @@
 		A10000000000000000000034 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000034; };
 		A10000000000000000000035 /* MenuBarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000035; };
 		A10000000000000000000036 /* QuantizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000036; };
+		A10000000000000000000037 /* CloudSyncProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000037; };
+		A10000000000000000000038 /* GradientAggregator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000038; };
+		A10000000000000000000039 /* AuditWebDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000039; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -81,6 +84,9 @@
 		A20000000000000000000034 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		A20000000000000000000035 /* MenuBarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarManager.swift; sourceTree = "<group>"; };
 		A20000000000000000000036 /* QuantizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuantizationService.swift; sourceTree = "<group>"; };
+		A20000000000000000000037 /* CloudSyncProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncProvider.swift; sourceTree = "<group>"; };
+		A20000000000000000000038 /* GradientAggregator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradientAggregator.swift; sourceTree = "<group>"; };
+		A20000000000000000000039 /* AuditWebDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuditWebDashboard.swift; sourceTree = "<group>"; };
 		A30000000000000000000001 /* NeuralForge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NeuralForge.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -166,6 +172,9 @@
 				A20000000000000000000032 /* BenchmarkService.swift */,
 				A20000000000000000000035 /* MenuBarManager.swift */,
 				A20000000000000000000036 /* QuantizationService.swift */,
+				A20000000000000000000037 /* CloudSyncProvider.swift */,
+				A20000000000000000000038 /* GradientAggregator.swift */,
+				A20000000000000000000039 /* AuditWebDashboard.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -276,6 +285,9 @@
 				A10000000000000000000034 /* OnboardingView.swift in Sources */,
 				A10000000000000000000035 /* MenuBarManager.swift in Sources */,
 				A10000000000000000000036 /* QuantizationService.swift in Sources */,
+				A10000000000000000000037 /* CloudSyncProvider.swift in Sources */,
+				A10000000000000000000038 /* GradientAggregator.swift in Sources */,
+				A10000000000000000000039 /* AuditWebDashboard.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
