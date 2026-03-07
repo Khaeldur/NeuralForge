@@ -604,13 +604,9 @@ extension NWTXTRecord {
     /// Get a string value for a TXT record key
     func getString(for key: String) -> String? {
         guard let entry = self.getEntry(for: key) else { return nil }
-        switch entry {
-        case .string(let value):
+        if case .string(let value) = entry {
             return value
-        case .none:
-            return nil
-        @unknown default:
-            return nil
         }
+        return nil
     }
 }

@@ -102,13 +102,11 @@ class BenchmarkService: ObservableObject {
         evaluationProgress = "Starting evaluation..."
 
         let startTime = Date()
-        var batchCount = 0
 
         cliRunner.evaluatePerplexity(
             checkpointPath: checkpointPath,
             evalDataPath: evalDataPath,
             onBatch: { [weak self] batch, loss, tokens in
-                batchCount = batch
                 Task { @MainActor [weak self] in
                     self?.evaluationProgress = "Evaluating... batch \(batch), loss: \(String(format: "%.4f", loss))"
                 }

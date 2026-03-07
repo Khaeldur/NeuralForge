@@ -376,7 +376,7 @@ class CLIRunner: ObservableObject {
         let tempBin = FileManager.default.temporaryDirectory
             .appendingPathComponent("nf_coreml_\(UUID().uuidString).bin").path
 
-        exportModel(checkpointPath: checkpointPath, format: "llama2c", outputPath: tempBin) { [weak self] success, error in
+        exportModel(checkpointPath: checkpointPath, format: "llama2c", outputPath: tempBin) { success, error in
             guard success else {
                 onComplete(false, error ?? "Failed to export llama2c intermediate format")
                 return

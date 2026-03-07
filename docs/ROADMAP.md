@@ -337,6 +337,32 @@ Additional v2.0 work:
 
 ---
 
+## v5.2: Hardening & Polish ✅
+
+### XCUITests (End-to-End UI Automation) ✅
+- [x] XCUITest target added to Xcode project (NeuralForgeUITests)
+- [x] 22 UI test cases covering onboarding flow, main view, project creation, settings, menus, window sizing
+- [x] Launch argument support for `-onboardingComplete` to test both onboarding and main flows
+- [x] Accessibility validation tests
+- **Status:** Complete. UI test target builds and compiles.
+
+### Compiler Warning Fixes ✅
+- [x] Fixed `CLIRunner.swift` unused `[weak self]` capture in CoreML export callback
+- [x] Fixed `ComputeClusterService.swift` non-exhaustive switch on NWTXTRecord.Entry
+- [x] Fixed `BenchmarkService.swift` unused `batchCount` variable in eval callback
+- [x] Fixed AppIcon.appiconset — added 3 unassigned children (64x64, 64x64@2x, 1024x1024) to Contents.json
+- **Status:** Complete. Zero warnings on clean build.
+
+### README / User Docs Update ✅
+- [x] Comprehensive README rewrite with all v5.x features
+- [x] Updated test counts (508 total: 152 CLI + 356 Swift)
+- [x] Added generate command documentation and examples
+- [x] Added macOS app feature list (16 features)
+- [x] Updated architecture diagram (39 source files, UITests)
+- **Status:** Complete.
+
+---
+
 ## Test Coverage
 
 | Component | Tests | Last Verified |

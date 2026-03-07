@@ -4,25 +4,46 @@ On-device AI fine-tuning for macOS, powered by Apple's Neural Engine.
 
 NeuralForge lets you fine-tune transformer models directly on your Mac using the Apple Neural Engine (ANE). Your data never leaves your device. Built on top of [maderix/ANE](https://github.com/maderix/ANE), which reverse-engineers the private `AppleNeuralEngine.framework` for direct access to the neural hardware.
 
+## Features
+
+- **On-device training** — Fine-tune LLMs on Apple Silicon using the Neural Engine
+- **Native macOS app** — SwiftUI dashboard with live loss charts, project management, and menu bar integration
+- **LoRA support** — Memory-efficient fine-tuning with configurable rank and target layers
+- **Text generation** — Interactive inference with temperature and top-p sampling
+- **Data pipeline** — Multi-shard loading, train/val split, shuffle, and tokenization
+- **LR scheduler** — Cosine annealing with warmup
+- **Export** — GGUF (llama.cpp), CoreML, and llama2c formats
+- **Distributed training** — Multi-Mac cluster via Bonjour with gradient aggregation
+- **Cloud sync** — S3 and iCloud checkpoint backup
+- **Enterprise audit** — Audit logging, compliance reports, and web dashboard
+- **Quantization** — INT8 and INT4 weight quantization with calibration
+
 ## Architecture
 
 ```
 NeuralForge/
 ├── cli/          # C/Obj-C CLI binary (training engine)
-├── app/          # SwiftUI macOS app (dashboard + project management)
+├── app/          # SwiftUI macOS app (39 source files)
+│   ├── NeuralForge/
+│   │   ├── Models/       # Project, TrainingProgress
+│   │   ├── Views/        # 19 views (dashboard, config, export, etc.)
+│   │   └── Services/     # 15 services (CLI runner, sync, cluster, etc.)
+│   ├── NeuralForgeUITests/  # XCUITest end-to-end UI tests
+│   └── Tests/            # 356 unit tests
 ├── converters/   # Python export scripts (GGUF, CoreML)
 ├── vendor/       # Vendored ANE framework (MIT)
 ├── scripts/      # Helper scripts
-└── models/       # Model weights + tokenizer
+├── models/       # Model weights + tokenizer
+└── docs/         # Architecture, roadmap, dev guide
 ```
 
 **CLI** handles all heavy lifting: ANE kernel compilation, forward/backward passes, Adam optimizer, checkpointing. Communicates with the app via NDJSON on stdout.
 
-**App** is a native SwiftUI macOS application that spawns the CLI as a subprocess, parses JSON progress, and renders a live training dashboard.
+**App** is a native SwiftUI macOS application that spawns the CLI as a subprocess, parses JSON progress, and renders a live training dashboard with EMA-smoothed loss charts.
 
 ## Requirements
 
-- macOS 13+ with Apple Silicon (M1/M2/M3/M4)
+- macOS 14+ with Apple Silicon (M1/M2/M3/M4)
 - Xcode 15+ (for building)
 - Python 3 with `numpy` (for converters)
 
@@ -52,10 +73,22 @@ This downloads:
 ./cli/neuralforge train \
   --model models/stories110M.bin \
   --data models/tinystories_data00.bin \
-  --steps 100
+  --steps 100 \
+  --warmup 10 \
+  --lr-schedule cosine
 ```
 
-### 4. Build the macOS app
+### 4. Generate text
+
+```bash
+./cli/neuralforge generate \
+  --model models/stories110M.bin \
+  --prompt "Once upon a time" \
+  --max-tokens 100 \
+  --temperature 0.8
+```
+
+### 5. Build the macOS app
 
 ```bash
 cd app
@@ -68,6 +101,7 @@ Or open `app/NeuralForge.xcodeproj` in Xcode and press Run.
 
 ```
 neuralforge train      [options]   Train a model
+neuralforge generate   [options]   Generate text from a model
 neuralforge tokenize   [options]   Tokenize text to binary tokens
 neuralforge export     [options]   Export checkpoint to model format
 neuralforge info       [options]   Show model info
@@ -81,17 +115,25 @@ neuralforge help                   Show this help
 neuralforge train --model stories110M.bin --data tokens.bin --steps 10000
 neuralforge train --resume --ckpt checkpoint.bin --data tokens.bin
 neuralforge train --lr 1e-4 --accum 5 --no-ane-extras
-neuralforge train --config config.json --steps 5000  # JSON config + CLI overrides
+neuralforge train --warmup 100 --lr-schedule cosine --lr-min 1e-5
+neuralforge train --val-data val_tokens.bin --val-every 100 --shuffle
+neuralforge train --config config.json --steps 5000
 neuralforge train --beta1 0.85 --beta2 0.995 --eps 1e-7 --grad-clip 0.5
 ```
 
 Output is NDJSON — one JSON object per line:
 ```json
 {"type":"init","params":110000000,"layers":12,"dim":768,...}
-{"type":"step","step":1,"total":10000,"loss":5.23,"ms":42.0,"tflops_ane":1.5,...}
-{"type":"batch","batch":1,"step":10,"avg_loss":4.8,...}
+{"type":"step","step":1,"total":10000,"loss":5.23,"lr":0.0001,"ms":42.0,"tflops_ane":1.5,...}
+{"type":"val","step":100,"val_loss":4.1}
 {"type":"checkpoint","path":"checkpoint.bin","step":100,"loss":3.2}
 {"type":"done","total_steps":10000,"final_loss":1.8,...}
+```
+
+### Generate
+
+```bash
+neuralforge generate --model stories110M.bin --prompt "The wizard" --temperature 0.9 --top-p 0.95 --max-tokens 200
 ```
 
 ### Tokenize
@@ -103,12 +145,33 @@ neuralforge tokenize --input my_data.txt --output tokens.bin --tokenizer tokeniz
 ### Export
 
 ```bash
-# Export to llama2.c format (full weights)
-neuralforge export --ckpt checkpoint.bin --format llama2c --output model.bin
-
 # Export to GGUF format (for llama.cpp)
 neuralforge export --ckpt checkpoint.bin --format gguf --output model.gguf
+
+# Export to llama2.c format (full weights)
+neuralforge export --ckpt checkpoint.bin --format llama2c --output model.bin
 ```
+
+## macOS App
+
+The SwiftUI app provides a full GUI for the entire workflow:
+
+- **Onboarding wizard** — Guided first-run setup with CLI path detection and HuggingFace token
+- **Project management** — Create, configure, and manage multiple training projects
+- **Live dashboard** — EMA-smoothed loss charts with validation overlay, TFLOPS monitor
+- **Training config** — Learning rate, scheduler, LoRA rank, batch size, and more
+- **Text generation** — Interactive inference with streaming output
+- **Data import** — Drag & drop text files, tokenize directly in the app
+- **Export** — One-click export to GGUF, CoreML, or llama2c
+- **Model cards** — Auto-generated HuggingFace-style model cards
+- **AI assistant** — Claude API integration for training guidance
+- **Sync dashboard** — Local and cloud checkpoint sync status
+- **Compute cluster** — Bonjour-discovered multi-Mac distributed training
+- **Audit & compliance** — Audit trail, compliance reports, web dashboard
+- **Benchmarks** — ANE performance profiling and perplexity evaluation
+- **Training history** — Searchable log of all past training runs
+- **Settings** — CLI path, API keys, default training parameters
+- **Menu bar** — Live training progress in the macOS menu bar
 
 ## Python Converters
 
@@ -163,12 +226,20 @@ Stopping training sends SIGINT → the CLI catches it, saves a checkpoint, and e
 ## Running Tests
 
 ```bash
-# CLI tests (109 tests)
+# CLI tests (152 tests)
 cd cli && make test
 
-# Swift tests (119 tests)
+# Swift unit tests (356 tests)
 cd app/Tests && swiftc -o test_swift -framework Foundation NeuralForgeTests.swift && ./test_swift
+
+# XCUITests (UI automation, requires Xcode)
+xcodebuild test -project app/NeuralForge.xcodeproj -scheme NeuralForge -destination 'platform=macOS'
+
+# Full build verification
+cd app && xcodebuild -project NeuralForge.xcodeproj -scheme NeuralForge build
 ```
+
+Total: **508 tests** (152 CLI + 356 Swift), 0 warnings, 39 source files.
 
 ## Performance
 
