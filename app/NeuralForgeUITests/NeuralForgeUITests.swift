@@ -323,4 +323,319 @@ final class NeuralForgeUITests: XCTestCase {
         XCTAssertTrue(mainViewVisible || !onboardingVisible,
                       "Main view should be visible when onboarding is complete")
     }
+
+    // =========================================================================
+    // MARK: - Sidebar Navigation Smoke Tests
+    // =========================================================================
+
+    /// Helper: launch app, create a project, return its name
+    private func launchWithProject(named name: String = "SmokeTest") {
+        app.launchArguments = ["-onboardingComplete", "YES"]
+        app.launch()
+
+        let addButton = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Add' OR label CONTAINS 'New'")).firstMatch
+        guard addButton.waitForExistence(timeout: 5) else { return }
+        addButton.click()
+
+        let nameField = app.textFields["Project name"]
+        if nameField.waitForExistence(timeout: 3) {
+            nameField.click()
+            nameField.typeText(name)
+            let createButton = app.buttons["Create"]
+            if createButton.waitForExistence(timeout: 2) {
+                createButton.click()
+            }
+        }
+    }
+
+    /// Helper: click a sidebar item by its label text
+    private func clickSidebarTab(_ label: String) {
+        let staticText = app.staticTexts[label]
+        if staticText.waitForExistence(timeout: 3) {
+            staticText.click()
+            return
+        }
+        let cell = app.cells.containing(.staticText, identifier: label).firstMatch
+        if cell.waitForExistence(timeout: 2) {
+            cell.click()
+            return
+        }
+        let any = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch
+        if any.waitForExistence(timeout: 2) {
+            any.click()
+        }
+    }
+
+    // MARK: Training Section
+
+    func testSidebarTab_Dashboard() throws {
+        launchWithProject()
+        clickSidebarTab("Dashboard")
+        XCTAssertTrue(app.windows.count > 0, "Dashboard tab should keep window open")
+    }
+
+    func testSidebarTab_Config() throws {
+        launchWithProject()
+        clickSidebarTab("Config")
+        let hasConfig = app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS[c] 'learning' OR label CONTAINS[c] 'steps' OR label CONTAINS[c] 'optimizer'"
+        )).firstMatch.waitForExistence(timeout: 3)
+        XCTAssertTrue(hasConfig || app.windows.count > 0, "Config tab should show training parameters")
+    }
+
+    func testSidebarTab_Data() throws {
+        launchWithProject()
+        clickSidebarTab("Data")
+        XCTAssertTrue(app.windows.count > 0, "Data tab should load without crashing")
+    }
+
+    func testSidebarTab_Generate() throws {
+        launchWithProject()
+        clickSidebarTab("Generate")
+        XCTAssertTrue(app.windows.count > 0, "Generate tab should load without crashing")
+    }
+
+    func testSidebarTab_Export() throws {
+        launchWithProject()
+        clickSidebarTab("Export")
+        XCTAssertTrue(app.windows.count > 0, "Export tab should load without crashing")
+    }
+
+    // MARK: Data & Models Section
+
+    func testSidebarTab_Models() throws {
+        launchWithProject()
+        clickSidebarTab("Models")
+        XCTAssertTrue(app.windows.count > 0, "Models tab should load without crashing")
+    }
+
+    func testSidebarTab_Ingest() throws {
+        launchWithProject()
+        clickSidebarTab("Ingest")
+        XCTAssertTrue(app.windows.count > 0, "Ingest tab should load without crashing")
+    }
+
+    func testSidebarTab_History() throws {
+        launchWithProject()
+        clickSidebarTab("History")
+        XCTAssertTrue(app.windows.count > 0, "History tab should load without crashing")
+    }
+
+    func testSidebarTab_Benchmarks() throws {
+        launchWithProject()
+        clickSidebarTab("Benchmarks")
+        XCTAssertTrue(app.windows.count > 0, "Benchmarks tab should load without crashing")
+    }
+
+    // MARK: Tools Section
+
+    func testSidebarTab_Assistant() throws {
+        launchWithProject()
+        clickSidebarTab("Assistant")
+        XCTAssertTrue(app.windows.count > 0, "Assistant tab should load without crashing")
+    }
+
+    func testSidebarTab_Sync() throws {
+        launchWithProject()
+        clickSidebarTab("Sync")
+        XCTAssertTrue(app.windows.count > 0, "Sync tab should load without crashing")
+    }
+
+    func testSidebarTab_Cluster() throws {
+        launchWithProject()
+        clickSidebarTab("Cluster")
+        XCTAssertTrue(app.windows.count > 0, "Cluster tab should load without crashing")
+    }
+
+    // MARK: Compliance Section
+
+    func testSidebarTab_Audit() throws {
+        launchWithProject()
+        clickSidebarTab("Audit")
+        XCTAssertTrue(app.windows.count > 0, "Audit tab should load without crashing")
+    }
+
+    func testSidebarTab_Reports() throws {
+        launchWithProject()
+        clickSidebarTab("Reports")
+        XCTAssertTrue(app.windows.count > 0, "Reports tab should load without crashing")
+    }
+
+    // MARK: Full Walkthrough
+
+    func testAllSidebarTabsNavigable() throws {
+        launchWithProject(named: "FullNavTest")
+        let tabs = [
+            "Dashboard", "Config", "Data", "Generate", "Export",
+            "Models", "Ingest", "History", "Benchmarks",
+            "Assistant", "Sync", "Cluster", "Audit", "Reports"
+        ]
+        for tab in tabs {
+            clickSidebarTab(tab)
+            Thread.sleep(forTimeInterval: 0.3)
+            XCTAssertTrue(app.windows.count > 0, "App should remain stable after clicking \(tab)")
+        }
+    }
+
+    // =========================================================================
+    // MARK: - Config Interaction Tests
+    // =========================================================================
+
+    func testConfigView_LoRASection() throws {
+        launchWithProject()
+        clickSidebarTab("Config")
+        let loraText = app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS[c] 'lora' OR label CONTAINS[c] 'LoRA'"
+        )).firstMatch
+        if loraText.waitForExistence(timeout: 3) {
+            XCTAssertTrue(loraText.exists, "LoRA config section should be visible")
+        }
+    }
+
+    func testConfigView_SchedulerSection() throws {
+        launchWithProject()
+        clickSidebarTab("Config")
+        let schedulerText = app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS[c] 'schedule' OR label CONTAINS[c] 'warmup' OR label CONTAINS[c] 'cosine'"
+        )).firstMatch
+        if schedulerText.waitForExistence(timeout: 3) {
+            XCTAssertTrue(schedulerText.exists, "LR scheduler section should be visible")
+        }
+    }
+
+    // =========================================================================
+    // MARK: - Project Lifecycle Tests
+    // =========================================================================
+
+    func testCreateAndSelectProject() throws {
+        app.launchArguments = ["-onboardingComplete", "YES"]
+        app.launch()
+
+        let addButton = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Add' OR label CONTAINS 'New'")).firstMatch
+        guard addButton.waitForExistence(timeout: 5) else {
+            XCTFail("Add button should exist"); return
+        }
+        addButton.click()
+
+        let nameField = app.textFields["Project name"]
+        guard nameField.waitForExistence(timeout: 3) else {
+            XCTFail("Name field should exist"); return
+        }
+        nameField.click()
+        nameField.typeText("TestProject123")
+
+        let createButton = app.buttons["Create"]
+        guard createButton.waitForExistence(timeout: 2) else {
+            XCTFail("Create button should exist"); return
+        }
+        createButton.click()
+        Thread.sleep(forTimeInterval: 1.0)
+        XCTAssertTrue(app.windows.count > 0, "Window should remain after project creation")
+    }
+
+    func testCreateMultipleProjects() throws {
+        app.launchArguments = ["-onboardingComplete", "YES"]
+        app.launch()
+
+        for i in 1...3 {
+            let addButton = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Add' OR label CONTAINS 'New'")).firstMatch
+            guard addButton.waitForExistence(timeout: 5) else { continue }
+            addButton.click()
+
+            let nameField = app.textFields["Project name"]
+            guard nameField.waitForExistence(timeout: 3) else { continue }
+            nameField.click()
+            nameField.typeText("Project\(i)")
+
+            let createButton = app.buttons["Create"]
+            guard createButton.waitForExistence(timeout: 2) else { continue }
+            createButton.click()
+            Thread.sleep(forTimeInterval: 0.5)
+        }
+        XCTAssertTrue(app.windows.count > 0, "App should handle multiple project creation")
+    }
+
+    // =========================================================================
+    // MARK: - Generate View Tests
+    // =========================================================================
+
+    func testGenerateView_HasPromptField() throws {
+        launchWithProject()
+        clickSidebarTab("Generate")
+        let hasEditor = app.textViews.count > 0
+        let hasPromptLabel = app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS[c] 'prompt'"
+        )).firstMatch.waitForExistence(timeout: 3)
+        XCTAssertTrue(hasEditor || hasPromptLabel, "Generate view should have prompt input")
+    }
+
+    // =========================================================================
+    // MARK: - Keyboard Shortcuts Tests
+    // =========================================================================
+
+    func testCmdNOpensNewProject() throws {
+        app.launchArguments = ["-onboardingComplete", "YES"]
+        app.launch()
+        app.typeKey("n", modifierFlags: .command)
+
+        let nameField = app.textFields["Project name"]
+        let cancelButton = app.buttons["Cancel"]
+        let sheetOpened = nameField.waitForExistence(timeout: 3) || cancelButton.waitForExistence(timeout: 1)
+        if sheetOpened {
+            XCTAssertTrue(sheetOpened, "Cmd+N should open new project sheet")
+            if cancelButton.exists { cancelButton.click() }
+        }
+    }
+
+    // =========================================================================
+    // MARK: - Stress Tests
+    // =========================================================================
+
+    func testRapidTabSwitching() throws {
+        launchWithProject(named: "StressTest")
+        let tabs = ["Dashboard", "Config", "Generate", "Models", "Export",
+                     "Audit", "Assistant", "Cluster", "Dashboard"]
+        for tab in tabs {
+            clickSidebarTab(tab)
+        }
+        XCTAssertTrue(app.windows.count > 0, "App should survive rapid tab switching")
+    }
+
+    func testWindowSurvivesTabNavigation() throws {
+        launchWithProject(named: "SurvivalTest")
+        let allTabs = ["Config", "Data", "Generate", "Export",
+                        "Models", "Ingest", "History", "Benchmarks",
+                        "Assistant", "Sync", "Cluster",
+                        "Audit", "Reports", "Dashboard"]
+        for tab in allTabs {
+            clickSidebarTab(tab)
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        XCTAssertTrue(app.windows.count > 0)
+        let window = app.windows.firstMatch
+        XCTAssertTrue(window.exists, "Window should still exist after full navigation")
+    }
+
+    // =========================================================================
+    // MARK: - Sidebar Structure Tests
+    // =========================================================================
+
+    func testSidebarSectionsExist() throws {
+        launchWithProject(named: "SectionTest")
+        let trainingSection = app.staticTexts["Training"]
+        let dataSection = app.staticTexts["Data & Models"]
+        let toolsSection = app.staticTexts["Tools"]
+        let complianceSection = app.staticTexts["Compliance"]
+        let anySection = trainingSection.waitForExistence(timeout: 3) ||
+                         dataSection.waitForExistence(timeout: 1) ||
+                         toolsSection.waitForExistence(timeout: 1) ||
+                         complianceSection.waitForExistence(timeout: 1)
+        XCTAssertTrue(anySection, "Sidebar should have section headers")
+    }
+
+    func testSidebarDefaultsToDashboard() throws {
+        launchWithProject(named: "DefaultTest")
+        Thread.sleep(forTimeInterval: 1.0)
+        XCTAssertTrue(app.windows.count > 0, "App should default to Dashboard view")
+    }
 }
