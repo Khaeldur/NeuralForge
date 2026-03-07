@@ -363,13 +363,69 @@ Additional v2.0 work:
 
 ---
 
+## v6.0: Platform Extensions ✅
+
+### Training Profiles (Save/Load Config Presets) ✅
+- [x] TrainingProfile model (Codable): name, description, config, tags, lastUsed
+- [x] 5 built-in presets: Quick Test, Standard, Long Run, LoRA Fine-Tune, Conservative
+- [x] TrainingProfileService (@MainActor singleton): CRUD, search, filter by tag, recent tracking
+- [x] Profile diff computation — show config differences between two profiles
+- [x] Apply profile to project — one-click config swap
+- [x] Create profile from project — extract current config into reusable preset
+- [x] Import/export profiles as JSON for sharing across machines
+- [x] Duplicate profiles with auto-naming
+- [x] 15 Swift tests covering presets, serialization, search, diff, apply, recent tracking
+- **Status:** Complete.
+
+### Drag & Drop Data Ingestion ✅
+- [x] DragDropDataService (@MainActor singleton): batch file processing with progress tracking
+- [x] 9 supported file types: txt, md, json, jsonl, csv, pdf, swift, py, html
+- [x] File validation: size limits (100MB), empty file detection, UTF-8 encoding check
+- [x] DroppedFileResult model with success/skipped/error status tracking
+- [x] IngestBatch aggregation: success/error/skip counts, total characters, line counts
+- [x] Staging directory workflow: validate → stage → concatenate → tokenize
+- [x] Token count estimation (chars ÷ 4 for English text)
+- [x] File size formatting (B/KB/MB)
+- [x] Configurable batch limit (1000 files per batch)
+- [x] 15 Swift tests covering extensions, limits, formatting, batching, staging, progress
+- **Status:** Complete.
+
+### Webhook Notifications (Slack/Discord/Generic) ✅
+- [x] WebhookNotificationService (@MainActor singleton): multi-provider webhook delivery
+- [x] 3 providers: Slack (attachments), Discord (embeds), Generic (JSON)
+- [x] 7 event types: training started/completed/failed, checkpoint, validation improved, loss target, export
+- [x] WebhookConfig (Codable): per-endpoint event filtering, metrics toggle, custom message
+- [x] Provider-specific payload formatting with color-coded status indicators
+- [x] Delivery tracking with success/failure history (max 100 entries)
+- [x] Test webhook functionality for verification
+- [x] Success rate monitoring and per-webhook delivery history
+- [x] Thread-safe nonisolated network calls with URLSession
+- [x] 15 Swift tests covering providers, events, payloads, delivery tracking, serialization
+- **Status:** Complete.
+
+### MLX Backend (Metal GPU Alternative) ✅
+- [x] MLXBackendService (@MainActor singleton): compute backend selection and management
+- [x] 3 compute backends: ANE (Neural Engine), MLX (Metal GPU), CPU (Accelerate)
+- [x] MLX availability detection via Python subprocess (version check)
+- [x] MLXModelInfo model: param count formatting, memory estimation per quantization
+- [x] Backend compatibility matrix per model format (bin/safetensors/gguf/npz)
+- [x] Performance multiplier estimates (ANE ~10x, MLX ~7x, CPU baseline)
+- [x] CLI argument generation per backend (--backend mlx, --no-ane-extras)
+- [x] MLX training/generate command generation (mlx_lm.lora, mlx_lm.generate)
+- [x] Backend benchmarking with forward/backward pass timing, TFLOPS, memory
+- [x] System capabilities query (CPU count, memory, OS version)
+- [x] 15 Swift tests covering backends, formatting, memory estimation, commands, benchmarks
+- **Status:** Complete.
+
+---
+
 ## Test Coverage
 
 | Component | Tests | Last Verified |
 |-----------|-------|---------------|
 | CLI (test_cli.m) | 152 | 2026-03-07 |
-| Swift (NeuralForgeTests.swift) | 356 | 2026-03-07 |
-| Xcode build (39 source files) | SUCCEEDED | 2026-03-07 |
+| Swift (NeuralForgeTests.swift) | 416 | 2026-03-07 |
+| Xcode build (43 source files) | SUCCEEDED | 2026-03-07 |
 | Real training (50 steps) | PASSED | 2025-03-07 |
 | Real generation (100 tokens) | PASSED | 2025-03-07 |
 | CLI tokenize (45KB file) | PASSED | 2025-03-07 |

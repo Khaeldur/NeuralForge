@@ -45,6 +45,10 @@
 		A10000000000000000000037 /* CloudSyncProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000037; };
 		A10000000000000000000038 /* GradientAggregator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000038; };
 		A10000000000000000000039 /* AuditWebDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000039; };
+		C10000000000000000000001 /* TrainingProfileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000001; };
+		C10000000000000000000002 /* DragDropDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000002; };
+		C10000000000000000000003 /* WebhookNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000003; };
+		C10000000000000000000004 /* MLXBackendService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000004; };
 		B10000000000000000000001 /* NeuralForgeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001; };
 /* End PBXBuildFile section */
 
@@ -89,6 +93,10 @@
 		A20000000000000000000038 /* GradientAggregator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradientAggregator.swift; sourceTree = "<group>"; };
 		A20000000000000000000039 /* AuditWebDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuditWebDashboard.swift; sourceTree = "<group>"; };
 		A30000000000000000000001 /* NeuralForge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NeuralForge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C20000000000000000000001 /* TrainingProfileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingProfileService.swift; sourceTree = "<group>"; };
+		C20000000000000000000002 /* DragDropDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragDropDataService.swift; sourceTree = "<group>"; };
+		C20000000000000000000003 /* WebhookNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebhookNotificationService.swift; sourceTree = "<group>"; };
+		C20000000000000000000004 /* MLXBackendService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLXBackendService.swift; sourceTree = "<group>"; };
 		B20000000000000000000001 /* NeuralForgeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeuralForgeUITests.swift; sourceTree = "<group>"; };
 		B30000000000000000000001 /* NeuralForgeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NeuralForgeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -204,6 +212,10 @@
 				A20000000000000000000037 /* CloudSyncProvider.swift */,
 				A20000000000000000000038 /* GradientAggregator.swift */,
 				A20000000000000000000039 /* AuditWebDashboard.swift */,
+				C20000000000000000000001 /* TrainingProfileService.swift */,
+				C20000000000000000000002 /* DragDropDataService.swift */,
+				C20000000000000000000003 /* WebhookNotificationService.swift */,
+				C20000000000000000000004 /* MLXBackendService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -344,6 +356,10 @@
 				A10000000000000000000037 /* CloudSyncProvider.swift in Sources */,
 				A10000000000000000000038 /* GradientAggregator.swift in Sources */,
 				A10000000000000000000039 /* AuditWebDashboard.swift in Sources */,
+				C10000000000000000000001 /* TrainingProfileService.swift in Sources */,
+				C10000000000000000000002 /* DragDropDataService.swift in Sources */,
+				C10000000000000000000003 /* WebhookNotificationService.swift in Sources */,
+				C10000000000000000000004 /* MLXBackendService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

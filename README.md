@@ -17,17 +17,21 @@ NeuralForge lets you fine-tune transformer models directly on your Mac using the
 - **Cloud sync** — S3 and iCloud checkpoint backup
 - **Enterprise audit** — Audit logging, compliance reports, and web dashboard
 - **Quantization** — INT8 and INT4 weight quantization with calibration
+- **Training profiles** — Save/load full config presets (5 built-in + custom)
+- **Drag & drop data** — Drop files directly onto the app to ingest training data
+- **Webhook notifications** — Slack/Discord/generic alerts on training events
+- **MLX backend** — Alternative Metal GPU backend for broader Mac compatibility
 
 ## Architecture
 
 ```
 NeuralForge/
 ├── cli/          # C/Obj-C CLI binary (training engine)
-├── app/          # SwiftUI macOS app (39 source files)
+├── app/          # SwiftUI macOS app (43 source files)
 │   ├── NeuralForge/
 │   │   ├── Models/       # Project, TrainingProgress
 │   │   ├── Views/        # 19 views (dashboard, config, export, etc.)
-│   │   └── Services/     # 15 services (CLI runner, sync, cluster, etc.)
+│   │   └── Services/     # 19 services (CLI runner, sync, cluster, webhooks, MLX, etc.)
 │   ├── NeuralForgeUITests/  # XCUITest end-to-end UI tests
 │   └── Tests/            # 356 unit tests
 ├── converters/   # Python export scripts (GGUF, CoreML)
@@ -172,6 +176,10 @@ The SwiftUI app provides a full GUI for the entire workflow:
 - **Training history** — Searchable log of all past training runs
 - **Settings** — CLI path, API keys, default training parameters
 - **Menu bar** — Live training progress in the macOS menu bar
+- **Training profiles** — Save, load, and share training config presets
+- **Drag & drop** — Drop text files onto the app for automatic data ingestion
+- **Webhooks** — Slack/Discord alerts on training completion, failures, and milestones
+- **MLX backend** — Alternative Metal GPU compute for broader model support
 
 ## Python Converters
 
@@ -229,7 +237,7 @@ Stopping training sends SIGINT → the CLI catches it, saves a checkpoint, and e
 # CLI tests (152 tests)
 cd cli && make test
 
-# Swift unit tests (356 tests)
+# Swift unit tests (416 tests)
 cd app/Tests && swiftc -o test_swift -framework Foundation NeuralForgeTests.swift && ./test_swift
 
 # XCUITests (UI automation, requires Xcode)
@@ -239,7 +247,7 @@ xcodebuild test -project app/NeuralForge.xcodeproj -scheme NeuralForge -destinat
 cd app && xcodebuild -project NeuralForge.xcodeproj -scheme NeuralForge build
 ```
 
-Total: **508 tests** (152 CLI + 356 Swift), 0 warnings, 39 source files.
+Total: **568 tests** (152 CLI + 416 Swift), 0 warnings, 43 source files.
 
 ## Performance
 

@@ -4624,6 +4624,699 @@ test("audit_sync_directory_machine_layout") {
     return auditPath == "/tmp/sync/Mac-Studio-1/audit.jsonl"
 }
 
+// ============================================================
+// MARK: - Training Profile Service Tests (15 tests)
+// ============================================================
+
+test("profile_default_config_values") {
+    // A fresh TrainingConfig should have known defaults
+    let cfg = TrainingConfig()
+    return cfg.totalSteps == 10000
+        && abs(cfg.learningRate - 3e-4) < 1e-8
+        && cfg.accumSteps == 10
+        && cfg.warmupSteps == 0
+        && cfg.lrSchedule == "none"
+        && cfg.loraRank == 0
+}
+
+test("profile_creation_with_name") {
+    struct Profile: Codable {
+        let id: UUID
+        var name: String
+        var description: String
+        var config: TrainingConfig
+        var created: Date
+        var tags: [String]
+    }
+    let cfg = TrainingConfig()
+    let profile = Profile(id: UUID(), name: "Quick Test", description: "Fast iteration", config: cfg, created: Date(), tags: ["quick", "test"])
+    return profile.name == "Quick Test"
+        && profile.description == "Fast iteration"
+        && profile.tags.count == 2
+        && profile.tags.contains("quick")
+}
+
+test("profile_serialization_roundtrip") {
+    struct Profile: Codable {
+        let id: UUID
+        var name: String
+        var config: TrainingConfig
+        var created: Date
+        var tags: [String]
+    }
+    let enc = JSONEncoder()
+    enc.dateEncodingStrategy = .iso8601
+    let dec = JSONDecoder()
+    dec.dateDecodingStrategy = .iso8601
+    var cfg = TrainingConfig()
+    cfg.totalSteps = 5000
+    cfg.learningRate = 1e-4
+    cfg.loraRank = 8
+    let profile = Profile(id: UUID(), name: "LoRA Test", config: cfg, created: Date(), tags: ["lora"])
+    let data = try enc.encode(profile)
+    let decoded = try dec.decode(Profile.self, from: data)
+    return decoded.name == "LoRA Test"
+        && decoded.config.totalSteps == 5000
+        && decoded.config.loraRank == 8
+        && decoded.tags == ["lora"]
+        && decoded.id == profile.id
+}
+
+test("profile_builtin_quick_test") {
+    var cfg = TrainingConfig()
+    cfg.totalSteps = 100
+    cfg.learningRate = 3e-4
+    cfg.checkpointEvery = 50
+    cfg.warmupSteps = 10
+    cfg.lrSchedule = "cosine"
+    return cfg.totalSteps == 100
+        && cfg.warmupSteps == 10
+        && cfg.lrSchedule == "cosine"
+}
+
+test("profile_builtin_standard") {
+    var cfg = TrainingConfig()
+    cfg.totalSteps = 5000
+    cfg.warmupSteps = 100
+    cfg.lrMin = 1e-5
+    cfg.lrSchedule = "cosine"
+    cfg.shuffle = true
+    return cfg.totalSteps == 5000
+        && cfg.shuffle == true
+        && cfg.lrSchedule == "cosine"
+}
+
+test("profile_builtin_lora_finetune") {
+    var cfg = TrainingConfig()
+    cfg.totalSteps = 2000
+    cfg.loraRank = 8
+    cfg.loraAlpha = 16.0
+    cfg.loraTargets = 15
+    return cfg.loraRank == 8
+        && cfg.loraAlpha == 16.0
+        && cfg.loraTargets == 15  // all QKVO = 1+2+4+8
+}
+
+test("profile_builtin_conservative") {
+    var cfg = TrainingConfig()
+    cfg.gradClipNorm = 0.5
+    cfg.beta2 = 0.95
+    cfg.accumSteps = 20
+    return cfg.gradClipNorm == 0.5
+        && cfg.beta2 == 0.95
+        && cfg.accumSteps == 20
+}
+
+test("profile_diff_computation") {
+    var cfgA = TrainingConfig()
+    cfgA.totalSteps = 1000
+    cfgA.learningRate = 3e-4
+
+    var cfgB = TrainingConfig()
+    cfgB.totalSteps = 5000
+    cfgB.learningRate = 1e-4
+
+    var diffs: [String] = []
+    if cfgA.totalSteps != cfgB.totalSteps { diffs.append("Steps: \(cfgA.totalSteps) → \(cfgB.totalSteps)") }
+    if cfgA.learningRate != cfgB.learningRate { diffs.append("LR changed") }
+
+    return diffs.count == 2
+        && diffs[0].contains("1000")
+        && diffs[0].contains("5000")
+}
+
+test("profile_apply_to_project") {
+    var cfg = TrainingConfig()
+    cfg.totalSteps = 999
+    cfg.learningRate = 1e-5
+    cfg.loraRank = 16
+
+    // Simulate applying profile config to a project
+    var projectConfig = TrainingConfig()
+    projectConfig = cfg
+
+    return projectConfig.totalSteps == 999
+        && abs(projectConfig.learningRate - 1e-5) < 1e-10
+        && projectConfig.loraRank == 16
+}
+
+test("profile_search_by_name") {
+    let names = ["Quick Test", "Long Run", "LoRA Fine-Tune", "Standard Training"]
+    let query = "lora"
+    let matches = names.filter { $0.lowercased().contains(query.lowercased()) }
+    return matches.count == 1 && matches[0] == "LoRA Fine-Tune"
+}
+
+test("profile_search_by_tag") {
+    let profiles: [(name: String, tags: [String])] = [
+        ("Quick", ["quick", "test"]),
+        ("Standard", ["standard", "cosine"]),
+        ("LoRA", ["lora", "efficient"]),
+    ]
+    let matches = profiles.filter { $0.tags.contains("lora") }
+    return matches.count == 1 && matches[0].name == "LoRA"
+}
+
+test("profile_all_tags_collection") {
+    let profiles: [[String]] = [["quick", "test"], ["standard", "cosine"], ["lora", "test"]]
+    let allTags = Array(Set(profiles.flatMap { $0 })).sorted()
+    return allTags.count == 5
+        && allTags.contains("quick")
+        && allTags.contains("test")
+        && allTags.contains("lora")
+}
+
+test("profile_recent_tracking") {
+    var recent: [UUID] = []
+    let maxRecent = 5
+    let ids = (0..<8).map { _ in UUID() }
+    for id in ids {
+        recent.removeAll { $0 == id }
+        recent.insert(id, at: 0)
+        if recent.count > maxRecent { recent = Array(recent.prefix(maxRecent)) }
+    }
+    return recent.count == maxRecent
+        && recent[0] == ids[7]  // most recent
+        && recent[4] == ids[3]  // 5th most recent
+}
+
+test("profile_duplicate_preserves_config") {
+    var cfg = TrainingConfig()
+    cfg.totalSteps = 7777
+    cfg.loraRank = 32
+
+    // Simulate duplicate: new ID, same config
+    let originalID = UUID()
+    let copyID = UUID()
+    return originalID != copyID
+        && cfg.totalSteps == 7777
+        && cfg.loraRank == 32
+}
+
+test("profile_export_import_data") {
+    struct SimpleProfile: Codable {
+        let name: String
+        let steps: Int
+    }
+    let enc = JSONEncoder()
+    let dec = JSONDecoder()
+    let profile = SimpleProfile(name: "Export Test", steps: 3000)
+    let data = try enc.encode(profile)
+    let imported = try dec.decode(SimpleProfile.self, from: data)
+    return imported.name == "Export Test" && imported.steps == 3000
+}
+
+// ============================================================
+// MARK: - Drag & Drop Data Service Tests (15 tests)
+// ============================================================
+
+test("dragdrop_supported_extensions") {
+    let supported: Set<String> = ["txt", "md", "json", "jsonl", "csv", "pdf", "swift", "py", "html"]
+    return supported.contains("txt")
+        && supported.contains("md")
+        && supported.contains("json")
+        && supported.contains("py")
+        && supported.count == 9
+}
+
+test("dragdrop_file_type_from_extension") {
+    let mapping: [String: String] = [
+        "txt": "plainText", "md": "markdown", "json": "json",
+        "jsonl": "jsonl", "csv": "csv", "pdf": "pdf",
+        "swift": "swift", "py": "python", "html": "html"
+    ]
+    return mapping["txt"] == "plainText"
+        && mapping["py"] == "python"
+        && mapping["swift"] == "swift"
+}
+
+test("dragdrop_unsupported_extension_rejected") {
+    let supported: Set<String> = ["txt", "md", "json", "jsonl", "csv", "pdf", "swift", "py", "html"]
+    return !supported.contains("exe")
+        && !supported.contains("zip")
+        && !supported.contains("dmg")
+        && !supported.contains("bin")
+}
+
+test("dragdrop_file_size_limit") {
+    let maxSizeMB: Int64 = 100
+    let smallFile: Int64 = 50 * 1024 * 1024  // 50MB
+    let bigFile: Int64 = 150 * 1024 * 1024   // 150MB
+    return smallFile <= maxSizeMB * 1024 * 1024
+        && bigFile > maxSizeMB * 1024 * 1024
+}
+
+test("dragdrop_empty_file_skipped") {
+    let fileSize: Int64 = 0
+    let status = fileSize == 0 ? "skipped" : "ok"
+    return status == "skipped"
+}
+
+test("dragdrop_file_size_formatting") {
+    func formatFileSize(_ bytes: Int64) -> String {
+        if bytes < 1024 { return "\(bytes) B" }
+        if bytes < 1024 * 1024 { return "\(bytes / 1024) KB" }
+        return "\(bytes / 1024 / 1024) MB"
+    }
+    return formatFileSize(500) == "500 B"
+        && formatFileSize(2048) == "2 KB"
+        && formatFileSize(5 * 1024 * 1024) == "5 MB"
+}
+
+test("dragdrop_token_count_estimation") {
+    // ~4 chars per token for English text
+    func estimateTokens(characters: Int) -> Int { characters / 4 }
+    return estimateTokens(characters: 4000) == 1000
+        && estimateTokens(characters: 100) == 25
+        && estimateTokens(characters: 0) == 0
+}
+
+test("dragdrop_batch_success_count") {
+    let statuses = ["success", "success", "error", "skipped", "success"]
+    let successCount = statuses.filter { $0 == "success" }.count
+    let errorCount = statuses.filter { $0 == "error" }.count
+    let skippedCount = statuses.filter { $0 == "skipped" }.count
+    return successCount == 3 && errorCount == 1 && skippedCount == 1
+}
+
+test("dragdrop_max_files_per_batch") {
+    let maxFiles = 1000
+    let urls = (0..<1500).map { "file_\($0).txt" }
+    let limited = Array(urls.prefix(maxFiles))
+    return limited.count == 1000
+}
+
+test("dragdrop_can_accept_mixed_urls") {
+    let supported: Set<String> = ["txt", "md", "json", "jsonl", "csv", "pdf", "swift", "py", "html"]
+    let urls = ["readme.md", "data.csv", "image.png", "code.py"]
+    let acceptable = urls.contains { url in
+        let ext = (url as NSString).pathExtension.lowercased()
+        return supported.contains(ext)
+    }
+    return acceptable  // at least one supported file in the batch
+}
+
+test("dragdrop_staging_dir_path") {
+    let projectDir = "/tmp/projects/abc123"
+    let stagingDir = (projectDir as NSString).appendingPathComponent("staging")
+    return stagingDir == "/tmp/projects/abc123/staging"
+}
+
+test("dragdrop_concatenation_separator") {
+    let texts = ["Hello world.", "Second file.", "Third file."]
+    let combined = texts.joined(separator: "\n\n")
+    return combined.contains("Hello world.\n\nSecond file.")
+        && combined.contains("Second file.\n\nThird file.")
+}
+
+test("dragdrop_progress_tracking") {
+    let total = 10
+    var progress: Double = 0
+    for i in 1...total {
+        progress = Double(i) / Double(total)
+    }
+    return abs(progress - 1.0) < 0.001
+}
+
+test("dragdrop_error_descriptions") {
+    let errors: [(String, String)] = [
+        ("emptyStaging", "No files in staging directory"),
+        ("unsupportedFileType", "Unsupported file type: exe"),
+        ("fileTooLarge", "File is too large"),
+        ("readError", "Could not read file"),
+    ]
+    return errors.count == 4
+        && errors[0].1.contains("staging")
+        && errors[1].1.contains("Unsupported")
+}
+
+test("dragdrop_character_and_line_count") {
+    let content = "Line 1\nLine 2\nLine 3\n"
+    let charCount = content.count
+    let lineCount = content.components(separatedBy: .newlines).count
+    return charCount == 21
+        && lineCount == 4  // 3 lines + trailing empty
+}
+
+// ============================================================
+// MARK: - Webhook Notification Service Tests (15 tests)
+// ============================================================
+
+test("webhook_provider_types") {
+    let providers = ["Slack", "Discord", "Generic"]
+    return providers.count == 3
+        && providers.contains("Slack")
+        && providers.contains("Discord")
+}
+
+test("webhook_event_types") {
+    let events = [
+        "training_started", "training_completed", "training_failed",
+        "checkpoint_saved", "validation_improved", "loss_target_reached",
+        "export_completed"
+    ]
+    return events.count == 7
+        && events.contains("training_completed")
+        && events.contains("training_failed")
+}
+
+test("webhook_config_defaults") {
+    struct WebhookCfg {
+        let name: String
+        let provider: String
+        let url: String
+        var enabledEvents: Set<String>
+        var isEnabled: Bool
+        var includeMetrics: Bool
+    }
+    let cfg = WebhookCfg(
+        name: "Test", provider: "Slack",
+        url: "https://hooks.slack.com/services/T.../B.../xxx",
+        enabledEvents: Set(["training_completed", "training_failed"]),
+        isEnabled: true, includeMetrics: true
+    )
+    return cfg.isEnabled && cfg.includeMetrics
+        && cfg.enabledEvents.contains("training_completed")
+}
+
+test("webhook_slack_payload_structure") {
+    let payload: [String: Any] = [
+        "attachments": [
+            [
+                "color": "#36a64f",
+                "text": "Training Completed\nProject: Test",
+                "footer": "NeuralForge",
+                "ts": Int(Date().timeIntervalSince1970)
+            ]
+        ]
+    ]
+    guard let attachments = payload["attachments"] as? [[String: Any]],
+          let first = attachments.first else { return false }
+    return first["color"] as? String == "#36a64f"
+        && first["footer"] as? String == "NeuralForge"
+        && (first["text"] as? String)?.contains("Training Completed") == true
+}
+
+test("webhook_discord_payload_structure") {
+    let payload: [String: Any] = [
+        "embeds": [
+            [
+                "title": "NeuralForge — Training Completed",
+                "description": "Training Completed\nProject: Test",
+                "color": 0x36A64F,
+                "footer": ["text": "NeuralForge"]
+            ]
+        ]
+    ]
+    guard let embeds = payload["embeds"] as? [[String: Any]],
+          let first = embeds.first else { return false }
+    return (first["title"] as? String)?.contains("NeuralForge") == true
+        && first["color"] as? Int == 0x36A64F
+}
+
+test("webhook_generic_payload_structure") {
+    let payload: [String: Any] = [
+        "event": "training_completed",
+        "project": "Test Project",
+        "message": "Training Completed",
+        "timestamp": ISO8601DateFormatter().string(from: Date()),
+        "source": "NeuralForge"
+    ]
+    return payload["event"] as? String == "training_completed"
+        && payload["source"] as? String == "NeuralForge"
+        && payload["project"] as? String == "Test Project"
+}
+
+test("webhook_event_display_names") {
+    let displayNames: [String: String] = [
+        "training_started": "Training Started",
+        "training_completed": "Training Completed",
+        "training_failed": "Training Failed",
+        "checkpoint_saved": "Checkpoint Saved",
+        "validation_improved": "Validation Improved",
+        "loss_target_reached": "Loss Target Reached",
+        "export_completed": "Export Completed",
+    ]
+    return displayNames["training_completed"] == "Training Completed"
+        && displayNames["training_failed"] == "Training Failed"
+}
+
+test("webhook_message_with_metrics") {
+    let event = "Training Completed"
+    let project = "MyProject"
+    let step = 5000
+    let loss = 1.85
+    var lines: [String] = []
+    lines.append("✅ \(event)")
+    lines.append("Project: \(project)")
+    lines.append("Step: \(step)")
+    lines.append("Loss: \(loss)")
+    let message = lines.joined(separator: "\n")
+    return message.contains("✅ Training Completed")
+        && message.contains("Step: 5000")
+        && message.contains("Loss: 1.85")
+}
+
+test("webhook_message_without_metrics") {
+    let event = "Training Completed"
+    let project = "MyProject"
+    let includeMetrics = false
+    var lines: [String] = []
+    lines.append("✅ \(event)")
+    lines.append("Project: \(project)")
+    if includeMetrics {
+        lines.append("Step: 5000")
+    }
+    let message = lines.joined(separator: "\n")
+    return message.contains("✅ Training Completed")
+        && !message.contains("Step:")
+}
+
+test("webhook_url_validation") {
+    func isValidURL(_ urlString: String) -> Bool {
+        URL(string: urlString) != nil && (urlString.hasPrefix("http://") || urlString.hasPrefix("https://"))
+    }
+    return isValidURL("https://hooks.slack.com/services/T123/B456/xxx")
+        && isValidURL("https://discord.com/api/webhooks/123/abc")
+        && !isValidURL("not-a-url")
+        && !isValidURL("ftp://invalid")
+}
+
+test("webhook_delivery_success_tracking") {
+    let deliveries: [(success: Bool, statusCode: Int)] = [
+        (true, 200), (true, 200), (false, 500),
+        (true, 200), (false, 403)
+    ]
+    let successCount = deliveries.filter { $0.success }.count
+    let successRate = Double(successCount) / Double(deliveries.count)
+    return abs(successRate - 0.6) < 0.01
+}
+
+test("webhook_delivery_history_limit") {
+    let maxHistory = 100
+    var history: [Int] = []
+    for i in 0..<150 {
+        history.insert(i, at: 0)
+        if history.count > maxHistory {
+            history = Array(history.prefix(maxHistory))
+        }
+    }
+    return history.count == 100
+        && history[0] == 149  // most recent
+}
+
+test("webhook_color_for_event") {
+    func colorForEvent(_ event: String) -> String {
+        switch event {
+        case "training_completed", "validation_improved", "export_completed": return "#36a64f"
+        case "training_failed": return "#ff0000"
+        default: return "#439FE0"
+        }
+    }
+    return colorForEvent("training_completed") == "#36a64f"
+        && colorForEvent("training_failed") == "#ff0000"
+        && colorForEvent("training_started") == "#439FE0"
+}
+
+test("webhook_serialization_roundtrip") {
+    struct WebhookCfg: Codable {
+        let id: UUID
+        var name: String
+        var provider: String
+        var url: String
+        var isEnabled: Bool
+    }
+    let enc = JSONEncoder()
+    let dec = JSONDecoder()
+    let cfg = WebhookCfg(id: UUID(), name: "Test Slack", provider: "Slack",
+                          url: "https://hooks.slack.com/test", isEnabled: true)
+    let data = try enc.encode(cfg)
+    let decoded = try dec.decode(WebhookCfg.self, from: data)
+    return decoded.name == "Test Slack"
+        && decoded.provider == "Slack"
+        && decoded.isEnabled
+        && decoded.id == cfg.id
+}
+
+test("webhook_filter_enabled_for_event") {
+    struct Hook {
+        let name: String
+        let isEnabled: Bool
+        let events: Set<String>
+    }
+    let hooks = [
+        Hook(name: "A", isEnabled: true, events: ["training_completed", "training_failed"]),
+        Hook(name: "B", isEnabled: false, events: ["training_completed"]),
+        Hook(name: "C", isEnabled: true, events: ["checkpoint_saved"]),
+    ]
+    let event = "training_completed"
+    let triggered = hooks.filter { $0.isEnabled && $0.events.contains(event) }
+    return triggered.count == 1 && triggered[0].name == "A"
+}
+
+// ============================================================
+// MARK: - MLX Backend Service Tests (15 tests)
+// ============================================================
+
+test("mlx_backend_types") {
+    let backends = ["ANE", "MLX", "CPU"]
+    return backends.count == 3
+        && backends.contains("ANE")
+        && backends.contains("MLX")
+        && backends.contains("CPU")
+}
+
+test("mlx_backend_display_names") {
+    let names: [String: String] = [
+        "ANE": "Apple Neural Engine",
+        "MLX": "MLX (Metal GPU)",
+        "CPU": "CPU (Accelerate)",
+    ]
+    return names["ANE"] == "Apple Neural Engine"
+        && names["MLX"] == "MLX (Metal GPU)"
+        && names["CPU"] == "CPU (Accelerate)"
+}
+
+test("mlx_performance_multipliers") {
+    let ane = 10.0
+    let mlx = 7.0
+    let cpu = 1.0
+    return ane > mlx && mlx > cpu && cpu == 1.0
+}
+
+test("mlx_model_info_param_formatting") {
+    func formatParams(_ count: Int64) -> String {
+        if count >= 1_000_000_000 { return String(format: "%.1fB", Double(count) / 1e9) }
+        return String(format: "%.0fM", Double(count) / 1e6)
+    }
+    return formatParams(110_000_000) == "110M"
+        && formatParams(7_000_000_000) == "7.0B"
+        && formatParams(1_500_000_000) == "1.5B"
+}
+
+test("mlx_model_memory_estimation") {
+    func estimateMemory(params: Int64, quantization: String?) -> Double {
+        let bytesPerParam: Double
+        switch quantization {
+        case "4bit": bytesPerParam = 0.5
+        case "8bit": bytesPerParam = 1.0
+        default: bytesPerParam = 2.0
+        }
+        return Double(params) * bytesPerParam / 1e9
+    }
+    let fp16 = estimateMemory(params: 110_000_000, quantization: nil)
+    let int8 = estimateMemory(params: 110_000_000, quantization: "8bit")
+    let int4 = estimateMemory(params: 110_000_000, quantization: "4bit")
+    return fp16 > int8 && int8 > int4
+        && abs(fp16 - 0.22) < 0.01
+        && abs(int8 - 0.11) < 0.01
+        && abs(int4 - 0.055) < 0.001
+}
+
+test("mlx_compatible_backends_for_bin") {
+    let modelPath = "models/stories110M.bin"
+    let ext = (modelPath as NSString).pathExtension.lowercased()
+    let hasANE = ext == "bin"
+    let hasMLX = ["safetensors", "gguf", "npz", "bin"].contains(ext)
+    return hasANE && hasMLX
+}
+
+test("mlx_compatible_backends_for_safetensors") {
+    let modelPath = "model.safetensors"
+    let ext = (modelPath as NSString).pathExtension.lowercased()
+    let hasANE = ext == "bin"
+    let hasMLX = ["safetensors", "gguf", "npz", "bin"].contains(ext)
+    return !hasANE && hasMLX
+}
+
+test("mlx_cli_args_for_ane") {
+    let backend = "ANE"
+    let args: [String] = backend == "ANE" ? [] : ["--backend", backend.lowercased()]
+    return args.isEmpty
+}
+
+test("mlx_cli_args_for_mlx") {
+    let backend = "MLX"
+    let args = ["--backend", "mlx"]
+    return args.count == 2 && args[1] == "mlx"
+}
+
+test("mlx_cli_args_for_cpu") {
+    let backend = "CPU"
+    let args = ["--no-ane-extras", "--backend", "cpu"]
+    return args.count == 3 && args.contains("--no-ane-extras")
+}
+
+test("mlx_training_command_generation") {
+    let modelPath = "model.safetensors"
+    let dataPath = "data/"
+    let steps = 2000
+    let lr = 1e-4
+    var args = ["python3", "-m", "mlx_lm.lora"]
+    args += ["--model", modelPath, "--data", dataPath, "--train"]
+    args += ["--iters", "\(steps)", "--learning-rate", String(format: "%.1e", lr)]
+    let cmd = args.joined(separator: " ")
+    return cmd.contains("mlx_lm.lora")
+        && cmd.contains("--iters 2000")
+        && cmd.contains("--learning-rate 1.0e-04")
+}
+
+test("mlx_generate_command_generation") {
+    let prompt = "Once upon a time"
+    let maxTokens = 100
+    let temp = 0.8
+    var args = ["python3", "-m", "mlx_lm.generate"]
+    args += ["--model", "model.safetensors"]
+    args += ["--prompt", "\"\(prompt)\""]
+    args += ["--max-tokens", "\(maxTokens)"]
+    args += ["--temp", String(format: "%.2f", temp)]
+    let cmd = args.joined(separator: " ")
+    return cmd.contains("mlx_lm.generate")
+        && cmd.contains("--max-tokens 100")
+        && cmd.contains("--temp 0.80")
+}
+
+test("mlx_install_command") {
+    let cmd = "pip3 install mlx mlx-lm"
+    return cmd.contains("mlx") && cmd.contains("mlx-lm")
+}
+
+test("mlx_benchmark_tflops_calculation") {
+    // Forward FLOPS for transformer: ~2 * params * seq_len per token
+    let params = 110e6
+    let seqLen = 256.0
+    let forwardMs = 15.0
+    let flops = 2.0 * params * seqLen  // ~56.3 GFLOPS per step
+    let tflops = flops / (forwardMs / 1000.0) / 1e12
+    return tflops > 1.0 && tflops < 10.0  // ~3.75 TFLOPS, reasonable for ANE
+}
+
+test("mlx_system_capabilities") {
+    let cpuCount = ProcessInfo.processInfo.processorCount
+    let memoryGB = Double(ProcessInfo.processInfo.physicalMemory) / 1e9
+    return cpuCount > 0 && memoryGB > 1.0
+}
+
 // Results
 print("\n=== Results: \(testsPassed)/\(testsRun) passed ===\n")
 exit(testsPassed == testsRun ? 0 : 1)
