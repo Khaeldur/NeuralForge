@@ -324,8 +324,7 @@ struct OnboardingView: View {
     private func detectCLI() {
         let candidates = [
             "/usr/local/bin/neuralforge",
-            NSHomeDirectory() + "/NeuralForge/cli/neuralforge",
-            NSHomeDirectory() + "/Desktop/sl/NeuralForge/cli/neuralforge",
+            "/opt/homebrew/bin/neuralforge",
             Bundle.main.bundlePath + "/Contents/Resources/neuralforge"
         ]
         // Also check @AppStorage

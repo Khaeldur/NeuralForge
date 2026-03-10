@@ -52,7 +52,6 @@ class CLIRunner: ObservableObject {
 
         // 5. Common locations
         let commonPaths = [
-            NSHomeDirectory() + "/Desktop/sl/NeuralForge/cli/neuralforge",
             "/usr/local/bin/neuralforge",
             "/opt/homebrew/bin/neuralforge",
         ]

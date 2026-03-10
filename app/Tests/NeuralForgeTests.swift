@@ -3640,10 +3640,9 @@ test("onboarding_cli_detection_paths") {
     // Should check common paths for CLI binary
     let candidates = [
         "/usr/local/bin/neuralforge",
-        NSHomeDirectory() + "/NeuralForge/cli/neuralforge",
-        NSHomeDirectory() + "/Desktop/sl/NeuralForge/cli/neuralforge",
+        "/opt/homebrew/bin/neuralforge",
     ]
-    return candidates.count == 3
+    return candidates.count == 2
         && candidates[0] == "/usr/local/bin/neuralforge"
         && candidates.allSatisfy { $0.contains("neuralforge") }
 }

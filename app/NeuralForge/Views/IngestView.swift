@@ -205,8 +205,6 @@ struct IngestView: View {
             cliDir + "/tokenizer.bin",
             cliDir + "/../models/tokenizer.bin",
             cliDir + "/../vendor/ANE/assets/models/tokenizer.bin",
-            NSHomeDirectory() + "/Desktop/sl/NeuralForge/vendor/ANE/assets/models/tokenizer.bin",
-            NSHomeDirectory() + "/Desktop/sl/NeuralForge/models/tokenizer.bin",
         ]
         return candidates.first { FileManager.default.fileExists(atPath: $0) } ?? "tokenizer.bin"
     }

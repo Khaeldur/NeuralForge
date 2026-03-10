@@ -2,17 +2,20 @@
 
 ## Prerequisites
 
-- macOS 13+ on Apple Silicon (M1/M2/M3/M4)
+- macOS 14+ on Apple Silicon (M1/M2/M3/M4)
 - Xcode 15+ (for SwiftUI app and build tools)
-- Python 3 with `numpy` (for converters)
-- ~500MB free disk space (for model files)
+- Python 3 with `numpy`, `coremltools` (for converters — `pip install -r converters/requirements.txt`)
+- ~2GB free disk space (for model files + build artifacts)
 
 ## Repository Setup
 
 ```bash
 git clone <repo-url>
 cd NeuralForge
+bash setup.sh        # one command: builds CLI, downloads models, runs tests, builds app
 ```
+
+Or do it manually:
 
 ### Download Model Files
 
