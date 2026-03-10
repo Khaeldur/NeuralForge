@@ -2860,7 +2860,7 @@ test("synced_item_model") {
     }
 
     let item = TestSyncedItem(
-        sourcePath: "/Users/m/projects/abc/checkpoints/checkpoint.bin",
+        sourcePath: "/home/user/projects/abc/checkpoints/checkpoint.bin",
         destPath: "/shared/checkpoints/MyProject/checkpoint.bin",
         projectName: "MyProject",
         syncDate: Date(),
@@ -4059,16 +4059,16 @@ test("eval_tokenizer_auto_detect_names") {
 }
 
 test("eval_model_dir_extraction") {
-    let modelPath = "/Users/m/models/stories110M.bin"
+    let modelPath = "/home/user/models/stories110M.bin"
     let modelDir = (modelPath as NSString).deletingLastPathComponent
-    return modelDir == "/Users/m/models"
+    return modelDir == "/home/user/models"
 }
 
 test("eval_tokenizer_path_construction") {
-    let modelDir = "/Users/m/models"
+    let modelDir = "/home/user/models"
     let tokName = "tokenizer.bin"
     let tokPath = (modelDir as NSString).appendingPathComponent(tokName)
-    return tokPath == "/Users/m/models/tokenizer.bin"
+    return tokPath == "/home/user/models/tokenizer.bin"
 }
 
 test("eval_sample_collection") {
@@ -4083,7 +4083,7 @@ test("eval_sample_collection") {
 }
 
 test("eval_model_name_from_path") {
-    let path = "/Users/m/models/stories110M.bin"
+    let path = "/home/user/models/stories110M.bin"
     let name = URL(fileURLWithPath: path).lastPathComponent
     return name == "stories110M.bin"
 }

@@ -116,24 +116,23 @@ Tests cover:
 
 Run everything in one go:
 ```bash
-# CLI tests
-cd /Users/m/Desktop/sl/NeuralForge/cli && make clean && make && make test
+# One-click full suite (recommended)
+make test-all
 
-# Swift tests
-cd /Users/m/Desktop/sl/NeuralForge/app/Tests && swiftc -o test_swift -framework Foundation NeuralForgeTests.swift && ./test_swift
-
-# Xcode build
-cd /Users/m/Desktop/sl/NeuralForge/app && xcodebuild -project NeuralForge.xcodeproj -scheme NeuralForge build
+# Or individually:
+cd cli && make clean && make && make test       # CLI tests
+cd app/Tests && swiftc -o test_swift -framework Foundation NeuralForgeTests.swift && ./test_swift  # Swift tests
+cd app && xcodebuild -project NeuralForge.xcodeproj -scheme NeuralForge build  # Xcode build
 
 # Sanity check: train 5 steps
-/Users/m/Desktop/sl/NeuralForge/cli/neuralforge train \
-  --model /Users/m/Desktop/sl/NeuralForge/models/stories110M.bin \
-  --data /Users/m/Desktop/sl/NeuralForge/models/tinystories_data00.bin \
+./cli/neuralforge train \
+  --model models/stories110M.bin \
+  --data models/tinystories_data00.bin \
   --steps 5
 
 # Sanity check: generate text
-/Users/m/Desktop/sl/NeuralForge/cli/neuralforge generate \
-  --model /Users/m/Desktop/sl/NeuralForge/models/stories110M.bin \
+./cli/neuralforge generate \
+  --model models/stories110M.bin \
   --prompt "Once upon a time" \
   --max-tokens 20
 ```
