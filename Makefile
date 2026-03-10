@@ -1,7 +1,7 @@
 # NeuralForge — Root Makefile
 # Run `make test-all` for one-click full test suite
 
-.PHONY: build test test-cli test-swift test-all test-quick test-integration build-app verify clean help
+.PHONY: build test test-cli test-swift test-all test-quick test-integration build-app verify clean help launch launch-posts metrics campaign-status campaign-hn screenshots
 
 # ── One-Click Test Launchers ──
 
@@ -73,6 +73,29 @@ launch-posts:
 metrics:
 	@bash scripts/launch/track_metrics.sh
 
+# Marketing campaign (scheduled posting)
+campaign-status:
+	@bash scripts/launch/campaign.sh status
+
+campaign-hn:
+	@bash scripts/launch/campaign.sh hn
+
+campaign-reddit:
+	@bash scripts/launch/campaign.sh reddit-localllama
+
+campaign-twitter:
+	@bash scripts/launch/campaign.sh twitter
+
+campaign-devto:
+	@bash scripts/launch/campaign.sh devto
+
+campaign-ph:
+	@bash scripts/launch/campaign.sh producthunt
+
+# Screenshot capture (needs Screen Recording permission)
+screenshots:
+	@swift scripts/launch/capture_app.swift
+
 # ── Help ──
 help:
 	@echo "NeuralForge Targets:"
@@ -89,3 +112,14 @@ help:
 	@echo "  make build-app    — Build macOS app via Xcode"
 	@echo "  make verify       — Full verification (build + tests + app)"
 	@echo "  make clean        — Remove build artifacts"
+	@echo ""
+	@echo "Launch & Marketing:"
+	@echo "  make launch       — Full launch preparation (GIF, posts, browser tabs)"
+	@echo "  make campaign-status — View campaign posting schedule and status"
+	@echo "  make campaign-hn  — Post to Hacker News"
+	@echo "  make campaign-reddit — Post to Reddit r/LocalLLaMA"
+	@echo "  make campaign-twitter — Post Twitter thread"
+	@echo "  make campaign-devto — Post Dev.to article"
+	@echo "  make campaign-ph  — Launch on Product Hunt"
+	@echo "  make metrics      — Track GitHub metrics"
+	@echo "  make screenshots  — Capture app screenshots (needs Screen Recording)"

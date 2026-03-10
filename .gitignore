@@ -32,4 +32,8 @@ __pycache__/
 # Launch assets (generated locally)
 assets/posts/
 assets/metrics.csv
+assets/campaign_log.csv
 assets/demo_raw.mov
+assets/demo.gif
+assets/demo_social.gif
+assets/screenshots/
