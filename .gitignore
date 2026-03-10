@@ -28,3 +28,8 @@ xcuserdata/
 __pycache__/
 *.pyc
 .venv/
+
+# Launch assets (generated locally)
+assets/posts/
+assets/metrics.csv
+assets/demo_raw.mov

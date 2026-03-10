@@ -62,9 +62,20 @@ clean:
 	rm -f app/Tests/test_swift
 	rm -rf /tmp/NF_TestBuild /tmp/NF_DerivedData
 
+# ── Launch & Marketing ──
+
+launch:
+	@bash scripts/launch/launch.sh all
+
+launch-posts:
+	@bash scripts/launch/generate_posts.sh
+
+metrics:
+	@bash scripts/launch/track_metrics.sh
+
 # ── Help ──
 help:
-	@echo "NeuralForge Test Targets:"
+	@echo "NeuralForge Targets:"
 	@echo ""
 	@echo "  ${GREEN}make test-all${NC}     — One-click full suite: unit + build + integration (~3 min)"
 	@echo "  make test-quick   — Unit tests only (~5 sec)"
